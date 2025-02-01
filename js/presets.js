@@ -137,7 +137,7 @@ const presets = {
 	"storm": {
 		waveSpeed: 0.998,
 		damping: 0.995,
-		propagationSpeed: 13.0,
+		propagationSpeed: 12.0,
 
 		refraction: 0.62,
 		waterTint: new Float32Array([0.07, 0.09, 0.13]),

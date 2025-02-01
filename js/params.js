@@ -516,8 +516,16 @@ class Params {
 			swirl: {
 				nnm: "swirl",
 				wht: "cmd",
-				cbk: () =>
-					this.liquid.createSwirls(),
+				cbk: () => {
+
+					this.toggleParams();
+					setTimeout(
+						() => this.liquid
+							.createSwirls(), 
+						200
+					);
+
+				},
 			},
 			/*waves: {
 				nnm: "waves"
@@ -815,7 +823,7 @@ class Params {
 				}
 
 				this.prename.innerText = "custom";
-				
+
 				// window.location.hash = "";
 
 				this.syncParams(params);

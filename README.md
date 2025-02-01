@@ -25,7 +25,7 @@ Liquid code experiment
 - reset : reset water state
 - upscl : render upscale
 - copy : create & copy URL with current parameters
-- 12345 : 
+- {soon} 
 - point : autotouch point
 - rain : is it raining ?
 - swirl : effect
@@ -55,9 +55,13 @@ framerate x render
 - Still water heavy CPU load
 - Params pointer capture on Android
 
+### Presets
+
+[clear reflections](https://nicopowa.github.io/ripples3/#wsp=0.997&dmp=0.995&pgs=13&rft=0.24&tnt=0.035&sps=0.14&rgs=0.64&wth=0.58&fre=2.2&frp=0.725&frr=0.3&blr=0.35&dst=3.6&skh=0.62&dpt=0.87&sct=0.28&env=0.73&trd=0.032&tmp=0.88&ttr=3.3&tsp=3.6&css=0.46&csc=0.3&csp=0.22&csb=0.34&csd=3.45&sun=0.6&lht=1.4&rfs=0.05&rfm=0.85&rfv=0.15&sth=0.1&sph=0.09&lth=0.19&lph=0.48&sth=0.1&sph=0.09&lth=0.19&lph=0.48)
+
 ## Experiment n°64 / Be water
 
-[Here](https://nicopowa.github.io/ripples3/index64.html)
+[Here](https://nicopowa.github.io/ripples3/index86.html)
 
 ## Soon
 

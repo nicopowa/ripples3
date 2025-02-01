@@ -5,38 +5,76 @@
  * https://github.com/nicopowa/ripples3
  */
 
+const handleError = err => {
+
+	console.error(err);
+
+	const errorDiv = document.createElement("div");
+
+	errorDiv.classList.add("err");
+	errorDiv.innerHTML = "<div>liquify fail</div>" + "<br/>" + err;
+	document.body.appendChild(errorDiv);
+
+};
+
+const lazy = (cb, ms = 256) =>
+	setTimeout(cb,
+		ms + Math.round(Math.random() * ms));
+
 window.addEventListener("load",
 	() => {
 
 		if(DEBUG)
 			console.log("ripples3");
 
+		window.addEventListener("error",
+			evt => {
+
+				handleError(evt.error);
+				return false;
+	
+			});
+
+		window.addEventListener("unhandledrejection",
+			evt => {
+
+				handleError(evt.reason);
+				return false;
+	
+			});
+
 		try {
 
 			const liquify = new Liquid("assets/img.webp");
 			const amplify = new Params(liquify);
 
-			const custom = amplify.hashParams();
-
-			liquify.flow(amplify,
-				custom)
+			liquify
+			.flow(amplify,
+				amplify.hashParams())
 			.then(() => {
 
 				if(DEBUG)
 					console.log("flowing");
-		
-			});
+
+				lazy(() => {
+				// if(!liquify.isTouched) liquify.dropIt();
+				/*lazy(
+							() => {
+								if(!liquify.isTouched) liquify.curveIt();
+							}, 
+							1000
+						);*/
+				},
+				500);
+			
+			})
+			.catch(err =>
+				handleError(err));
 	
 		}
 		catch (err) {
 
-			console.error(err);
-
-			const errorDiv = document.createElement("div");
-
-			errorDiv.classList.add("err");
-			errorDiv.innerHTML = "<div>liquify fail</div>" + "<br/>" + err;
-			document.body.appendChild(errorDiv);
+			handleError(err);
 	
 		}
 
@@ -53,7 +91,8 @@ class Liquid {
 	 */
 	constructor(imagePath) {
 
-		this.sizeRef = 1024; // base size
+		this.sizeRef = 960; // ref size
+		this.baseScale = 2.0; // ref scale
 
 		// this.MAX_SCALE = Math.min(window.devicePixelRatio || 1, 2); // default device scale
 		this.MAX_SCALE = 2.0; // hardcoded max scale
@@ -64,21 +103,24 @@ class Liquid {
 
 		this.TARGET_FPS = 55; // downscale if less
 		this.SCALE_CHECK_INTERVAL = 1000; // perf check interval
-
 		this.SCALE_STEP = 0.5; // scale step
-
 		this.ENABLE_UPSCALE = true; // enable auto upscale
 		this.LOOPS_TO_SCALE = 3; // loops before scale (up or down)
+
+		// DO NOT EDIT BELOW
+
+		this.PERF_CHECK = false;
 		this.LOOP_COUNT = 0; // check loops count
-		this.DOWNSCALE_FROM = this.MAX_SCALE; // prevent upscale loop
+		this.DOWN_FROM = this.MAX_SCALE; // prevent upscale loop
 
 		this.FIXED_TIMESTEP = 1000.0 / 60.0; // frame time 16.667
+		this.DELTA_TIMESTEP = this.FIXED_TIMESTEP / 1000;
 
 		this.ww // window.innerWidth
 			= this.wh = 0; // window.innerHeight
 
 		this.sizeBase = 0;
-		this.baseScale = 2.0; // ref scale
+		this.scaleBase = this.displayScale / this.baseScale;
 
 		this.syncSize();
 
@@ -86,7 +128,7 @@ class Liquid {
 
 		this.params = {
 			waveSpeed: 0.997,
-			damping: 0.995,
+			damping: 0.992,
 			propagationSpeed: 8.0,
 			refraction: 0.8,
 			waterTint: new Float32Array([0.04, 0.06, 0.11]),
@@ -129,7 +171,6 @@ class Liquid {
 
 		this.amplify
 			= this.hitting
-			= this.sizer
 			= this.sizing
 			= this.image
 			= this.cvs
@@ -170,6 +211,7 @@ class Liquid {
 		this.isLiquid = false; // init state
 		this.isRunning = false; // render loop state
 		this.isVisible = true; // visibility state
+		this.isTouched = false; // first touch
 		this.isAutoTouching = false;
 
 		this.isRaining = false;
@@ -196,7 +238,11 @@ class Liquid {
 		if(DEBUG)
 			console.log("load params");
 
-		this.resetWaterState("loading");
+		this.stopPerfCheck();
+
+		this.renderText("load params");
+
+		this.resetWaterState();
 
 		this.params = {
 			...this.params,
@@ -204,6 +250,8 @@ class Liquid {
 		};
 
 		this.syncUniforms();
+
+		this.startPerfCheck();
 	
 	}
 
@@ -224,10 +272,7 @@ class Liquid {
 			this.loadBackground,
 			this.loadForeground,
 			this.initializeWebGL,
-			(DEBUG ? 
-				this.initShaders 
-				: this.initShadersZip
-			),
+			DEBUG ? this.initShaders : this.initShadersZip,
 			this.initUniforms,
 			this.initBuffers,
 			this.syncCanvas,
@@ -248,35 +293,20 @@ class Liquid {
 		Promise.resolve())
 		.then(() => {
 
-			return new Promise(liquified => {
+			return this.fadeCanvas(1)
+			.then(() => {
 
-				if(DEBUG)
-					console.log("liquid");
+				console.log("liquified");
 
-				this.cvs.addEventListener(
-					"transitionend",
-					() => {
+				this.isLiquid = true;
 
-						this.isLiquid = true;
-
-						this.amplify.liquified();
-
-						liquified();
-					
-					},
-					{
-						once: true,
-					}
-				);
-
-				this.cvs.style.opacity = 1;
+				this.amplify.liquified();
 			
 			});
 		
 		})
 		.catch(err => {
 
-			console.log("liquify fail");
 			throw err;
 		
 		});
@@ -287,10 +317,8 @@ class Liquid {
 
 		if(DEBUG)
 			console.log("load background");
-		this.image = await this.loadImage(this.img);
 
-		// android load fail no back texture ?
-		// console.log(this.image.complete);
+		this.image = await this.loadImage(this.img);
 	
 	}
 
@@ -328,7 +356,7 @@ class Liquid {
 
 	loadImage(imgSrc) {
 
-		return new Promise((imgLoaded, imgError) => {
+		return new Promise(imgLoaded => {
 
 			const i = new Image();
 
@@ -336,8 +364,11 @@ class Liquid {
 				() =>
 					imgLoaded(i));
 			i.addEventListener("error",
-				() =>
-					imgError());
+				() => {
+
+					throw new Error("image load error " + imgSrc);
+			
+				});
 			i.crossOrigin = "Anonymous";
 			i.src = imgSrc;
 		
@@ -362,21 +393,20 @@ class Liquid {
 		this.gl = this.cvs.getContext("webgl2",
 			contextOptions);
 		if(!this.gl)
-			throw new Error("WebGL2 not supported");
+			throw new Error("webgl2 not supported");
 
 		const ext = this.gl.getExtension("EXT_color_buffer_float");
 
 		if(!ext)
-			throw new Error("EXT_color_buffer_float not supported");
+			throw new Error("ext_color_buffer_float not supported");
 
 		this.gl.getExtension("OES_texture_float_linear");
 
-		const error = this.gl.getError();
+		const glInitErr = this.gl.getError();
 
-		if(error !== this.gl.NO_ERROR) {
+		if(glInitErr !== this.gl.NO_ERROR) {
 
-			console.error("WebGL error during initialization:",
-				error);
+			throw new Error("webgl init error " + glInitErr);
 		
 		}
 	
@@ -673,7 +703,7 @@ void main() {
 		);
 
 		const RENDER_SHADER = await this.decompress(
-			"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"	
+			"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"
 		);
 
 		this.physicsProgram = this.createProgram(VERTEX_SHADER,
@@ -716,8 +746,12 @@ void main() {
 
 		this.ww = window.innerWidth;
 		this.wh = window.innerHeight;
+
 		this.sizeBase = Math.max(this.ww,
 			this.wh) / this.sizeRef;
+
+		this.deltaTime
+			= this.DELTA_TIMESTEP * (this.baseScale / this.displayScale);
 
 		if(DEBUG)
 			console.log(
@@ -737,12 +771,29 @@ void main() {
 		this.cvs.width = cw;
 		this.cvs.height = ch;
 
-		this.cvs.style.width = this.ww + "px";
-		this.cvs.style.height = this.wh + "px";
+		// this.cvs.style.width = this.ww + "px";
+		// this.cvs.style.height = this.wh + "px";
 
 		if(DEBUG)
 			console.log("canvas",
 				cw + "x" + ch);
+	
+	}
+
+	fadeCanvas(op) {
+
+		return new Promise(res => {
+
+			this.cvs.addEventListener("transitionend",
+				() =>
+					res(),
+				{
+					once: true,
+				});
+
+			this.cvs.style.opacity = op;
+		
+		});
 	
 	}
 
@@ -759,10 +810,9 @@ void main() {
 
 		if(DEBUG)
 			console.log("sync uniforms");
-
 		this.scaledPropagation = Math.round(
 			(this.params.propagationSpeed * this.displayScale) / this.baseScale
-		);
+		);															  
 	
 	}
 
@@ -829,7 +879,6 @@ void main() {
 
 		if(waterError !== gl.NO_ERROR) {
 
-			console.error(waterError);
 			throw new Error("create water texture fail");
 		
 		}
@@ -895,8 +944,6 @@ void main() {
 
 		if(frameBufferStatus !== gl.FRAMEBUFFER_COMPLETE) {
 
-			console.error("framebuffer create fail",
-				frameBufferStatus);
 			throw new Error(`incomplete framebuffer ${frameBufferStatus}`);
 		
 		}
@@ -917,11 +964,13 @@ void main() {
 
 	debouncedResize() {
 
-		clearTimeout(this.sizing);
+		/*clearTimeout(this.sizing);
 
 		this.sizing = setTimeout(() =>
 			this.handleResize(),
-		256);
+		128);*/
+
+		this.handleResize();
 	
 	}
 
@@ -930,13 +979,28 @@ void main() {
 		if(DEBUG)
 			console.log("window resize");
 
-		this.updateGL();
+		this.stopPerfCheck();
 
-		this.amplify.updateBounds();
+		this.amplify.mask(true);
+
+		this.fadeCanvas(0)
+		.then(() => {
+
+			this.amplify.updateBounds();
+
+			this.syncLiquid();
+
+			this.fadeCanvas(1);
+
+			this.amplify.mask(false);
+
+			this.startPerfCheck();
+		
+		});
 	
 	}
 
-	updateGL() {
+	syncLiquid() {
 
 		this.syncSize();
 
@@ -1040,9 +1104,11 @@ void main() {
 					{
 						position: `${uTouch}position`,
 						radius: `${uTouch}radius`,
+						damping: `${uTouch}damping`,
 						strength: `${uTouch}strength`,
 						trail: `${uTouch}trail`,
 						spread: `${uTouch}spread`,
+						angle: `${uTouch}angle`,
 					});
 			
 			}),
@@ -1184,9 +1250,8 @@ void main() {
 
 				const shaderInfo = gl.getShaderInfoLog(shader);
 
-				console.error("compile shader fail",
-					shaderInfo);
 				gl.deleteShader(shader);
+
 				throw new Error(`compile shader fail ${shaderInfo}`);
 			
 			}
@@ -1214,8 +1279,6 @@ void main() {
 
 				const programInfo = gl.getProgramInfoLog(program);
 
-				console.error("link program fail",
-					programInfo);
 				throw new Error(`link program fail ${programInfo}`);
 			
 			}
@@ -1223,8 +1286,6 @@ void main() {
 		}
 		catch (programError) {
 
-			console.error("shader program create fail",
-				programError);
 			throw programError;
 		
 		}
@@ -1322,12 +1383,16 @@ void main() {
 				touch.y);
 			gl.uniform1f(u.touches[i].radius,
 				touch.touchRadius);
+			gl.uniform1f(u.touches[i].damping,
+				touch.touchDamping);
 			gl.uniform1f(u.touches[i].strength,
 				touch.initialImpact);
 			gl.uniform1f(u.touches[i].trail,
 				touch.trailStrength);
 			gl.uniform1f(u.touches[i].spread,
 				touch.trailSpread);
+			gl.uniform1f(u.touches[i].angle,
+				touch.trailAngle);
 		
 		}
 
@@ -1395,8 +1460,7 @@ void main() {
 
 		if(renderError !== gl.NO_ERROR) {
 
-			console.error("render step error",
-				renderError);
+			throw new Error("render step error " + renderError);
 		
 		}
 
@@ -1404,8 +1468,7 @@ void main() {
 
 		if(fbStatus !== gl.FRAMEBUFFER_COMPLETE) {
 
-			console.error("incomplete framebuffer",
-				fbStatus);
+			throw new Error("incomplete framebuffer " + fbStatus);
 		
 		}
 	
@@ -1549,10 +1612,12 @@ void main() {
 		if(DEBUG)
 			console.log("start render loop");
 
+		this.renderText("liquify");
+
 		this.isRunning = true;
 		this.amplify.toggle("flow");
 		this.lastFrameTime = performance.now();
-		this.delayPerfCheck("liquifying");
+		this.startPerfCheck();
 		this.nextFrame();
 	
 	}
@@ -1565,7 +1630,10 @@ void main() {
 			console.log("stop render loop");
 
 		this.isRunning = false;
+
 		cancelAnimationFrame(this.loop);
+
+		this.stopPerfCheck();
 
 		this.renderInfo("--");
 
@@ -1585,15 +1653,11 @@ void main() {
 
 		if(!this.gl || this.gl.isContextLost()) {
 
-			console.error("webgl context lost");
 			this.stopRenderLoop();
-			return;
+
+			throw new Error("webgl context lost");
 		
 		}
-
-		// FIXED TIME STEP - ALWAYS 16.666ms
-		this.deltaTime
-			= (this.FIXED_TIMESTEP / 1000) * (this.baseScale / this.displayScale);
 
 		this.accumulatedTime += this.deltaTime;
 
@@ -1609,13 +1673,43 @@ void main() {
 	
 	}
 
+	startPerfCheck(chk = 1000) {
+
+		if(this.PERF_CHECK)
+			return;
+
+		if(DEBUG)
+			console.log("start perf check",
+				chk);
+
+		this.PERF_CHECK = true;
+
+		this.notBefore = this.lastFrameTime + chk;
+		// this.frameTimeHistory = new Array(30).fill(16.67);
+	
+	}
+
+	stopPerfCheck() {
+
+		if(!this.PERF_CHECK)
+			return;
+
+		if(DEBUG)
+			console.log("stop perf check");
+
+		this.PERF_CHECK = false;
+
+		this.currentFPS = 0;
+	
+	}
+
 	checkPerformance(currentTime) {
 
 		const frameTime = currentTime - this.lastFrameTime;
 
 		this.lastFrameTime = currentTime;
 
-		if(currentTime <= this.notBefore)
+		if(!this.PERF_CHECK || currentTime < this.notBefore)
 			return;
 
 		this.frameTimeHistory[this.frameTimeIndex] = frameTime;
@@ -1652,7 +1746,7 @@ void main() {
 				}
 				else if(
 					this.ENABLE_UPSCALE
-					&& this.displayScale < this.DOWNSCALE_FROM
+					&& this.displayScale < this.DOWN_FROM
 					&& this.displayScale < this.MAX_SCALE
 				) {
 
@@ -1666,25 +1760,12 @@ void main() {
 	
 	}
 
-	delayPerfCheck(why = "wait") {
-
-		if(DEBUG)
-			console.log("check perf later");
-
-		this.renderText(why);
-
-		this.notBefore = this.lastFrameTime + 2500;
-		// this.frameTimeHistory = new Array(30).fill(16.67);
-		this.currentFPS = 0;
-	
-	}
-
 	downScale() {
 
 		if(DEBUG)
 			console.log("downscale");
 
-		this.DOWNSCALE_FROM = this.displayScale - this.SCALE_STEP;
+		this.DOWN_FROM = this.displayScale - this.SCALE_STEP;
 		this.setDisplayScale(this.displayScale - this.SCALE_STEP);
 	
 	}
@@ -1711,20 +1792,27 @@ void main() {
 			console.log("set scale",
 				ds);
 
-		this.LOOP_COUNT = 0;
-		const upsAndDowns = ds > this.displayScale ? "up" : "down";
+		this.stopPerfCheck();
 
-		this.delayPerfCheck(upsAndDowns + "scale");
+		this.renderText((ds > this.displayScale ? "up" : "down") + "scale");
+
+		this.LOOP_COUNT = 0;
 
 		// clean round
 		this.displayScale = Math.round(ds * 2) / 2;
-		this.updateGL();
+		this.scaleBase = this.displayScale / this.baseScale;
+
+		this.syncLiquid();
+
+		this.startPerfCheck();
 	
 	}
 
 	renderText(str) {
 
-		this.infos.textContent = str;
+		window.requestAnimationFrame(() => {
+			this.infos.textContent = str
+		});
 	
 	}
 
@@ -1764,12 +1852,10 @@ void main() {
 	
 	}
 
-	resetWaterState(why = "reset") {
+	resetWaterState() {
 
 		if(DEBUG)
 			console.log("reset state");
-
-		this.delayPerfCheck(why);
 
 		const gl = this.gl;
 		const initialData = new Float32Array(this.w * this.h * 4);
@@ -1826,12 +1912,12 @@ void main() {
 				window.location.reload());
 
 		const pointerEvents = {
-			"touchstart": this.dontTouchMe,
-			"pointerdown": this.handlePointerStart,
-			"pointermove": this.handlePointerMove,
-			"pointerup": this.handlePointerEnd,
-			"pointerout": this.handlePointerEnd,
-			"pointercancel": this.handlePointerEnd,
+			touchstart: this.dontTouchMe,
+			pointerdown: this.handlePointerStart,
+			pointermove: this.handlePointerMove,
+			pointerup: this.handlePointerEnd,
+			pointerout: this.handlePointerEnd,
+			pointercancel: this.handlePointerEnd,
 		};
 
 		Object.keys(pointerEvents)
@@ -1884,9 +1970,11 @@ void main() {
 
 		return {
 			touchRadius: this.params.touchRadius,
+			touchDamping: this.params.touchDamping,
 			initialImpact: this.params.initialImpact,
 			trailStrength: this.params.trailStrength,
 			trailSpread: this.params.trailSpread,
+			trailAngle: this.params.trailAngle,
 		};
 	
 	}
@@ -1903,6 +1991,9 @@ void main() {
 		evt.preventDefault();
 
 		const pId = evt.pointerId;
+
+		if(!this.isTouched)
+			this.isTouched = true;
 
 		this.cvs.setPointerCapture(pId);
 
@@ -2035,6 +2126,187 @@ void main() {
 	
 	}
 
+	// UTIL
+
+	randRange(min, max) {
+
+		return Math.floor(Math.random() * (max - min + 1)) + min;
+	
+	}
+
+	// EFFECTS
+
+	/**
+	 * @method dropIt :
+	 * @param {number=} x :
+	 * @param {number=} y :
+	 */
+	dropIt(x, y) {
+
+		x ||= this.randRange(this.w * 0.3,
+			this.w * 0.7);
+		y ||= this.randRange(this.h * 0.3,
+			this.h * 0.7);
+
+		const dropId = "drop_" + this.genPopId();
+
+		const point = {
+			x,
+			y,
+			prevX: x,
+			prevY: y,
+			...this.pointOptions(),
+			touchRadius: 0.015,
+			touchDamping: 990,
+			initialImpact: 0.15,
+			trailStrength: 0.001,
+			trailSpread: 0,
+			trailAngle: this.params.trailAngle,
+			// initialImpact: 0.1,
+			// trailStrength: 0
+		};
+
+		this.pops.set(dropId,
+			point);
+
+		setTimeout(() => {
+
+			this.pops.delete(dropId);
+		
+		},
+		75 + Math.round(Math.random() * 100));
+	
+	}
+
+	curveIt() {
+
+		const centerX = this.w * 0.5;
+		const centerY = this.h * 0.5;
+
+		const offCenterX = 0.3;
+		const offCenterY = 0.3;
+
+		const startX = centerX - this.w * offCenterX;
+		const startY = centerY + (Math.random() - 0.5) * this.h * offCenterY;
+		const endX = centerX + this.w * offCenterX;
+		const endY = centerY + (Math.random() - 0.5) * this.h * offCenterY;
+
+		const ctrlX = centerX + (Math.random() - 0.5) * this.w * 0.2;
+		const ctrlY = centerY + (Math.random() - 0.5) * this.h * 0.4;
+
+		const touchId = "curve_" + this.genPopId();
+		const point = {
+			x: startX,
+			y: startY,
+			prevX: startX,
+			prevY: startY,
+			...this.pointOptions(),
+			// touchRadius: 0.015,
+			// trailStrength: 0.08,
+			// trailSpread: 0.05
+		};
+
+		this.pops.set(touchId,
+			point);
+		const startTime = performance.now();
+		const duration = 1234;
+
+		const animate = () => {
+
+			const elapsed = performance.now() - startTime;
+			const progress = elapsed / duration;
+
+			if(progress >= 1) {
+
+				this.pops.delete(touchId);
+				return;
+			
+			}
+
+			point.prevX = point.x;
+			point.prevY = point.y;
+
+			const t = progress;
+			const invT = 1 - t;
+
+			point.x
+				= invT * invT * startX + 2 * invT * t * ctrlX + t * t * endX;
+			point.y
+				= invT * invT * startY + 2 * invT * t * ctrlY + t * t * endY;
+
+			requestAnimationFrame(animate);
+		
+		};
+
+		animate();
+	
+	}
+
+	snailIt() {
+
+		const centerX = this.w * 0.5;
+		const centerY = this.h * 0.5;
+
+		const startX = centerX + (Math.random() - 0.5) * this.w * 0.3;
+		const startY = centerY + (Math.random() - 0.5) * this.h * 0.3;
+
+		const touchId = "curve_" + this.genPopId();
+		const point = {
+			x: startX,
+			y: startY,
+			prevX: startX,
+			prevY: startY,
+			...this.pointOptions(),
+			touchRadius: 0.02,
+			trailStrength: 0.12,
+			trailSpread: 0.15,
+		};
+
+		this.pops.set(touchId,
+			point);
+
+		let time = 0;
+		const duration = 2500; // 2.5 seconds
+		const startTime = performance.now();
+
+		// Random curve parameters
+		const radiusX = this.w * 0.15; // Curve width
+		const radiusY = this.h * 0.15; // Curve height
+		const loops = 1.5 + Math.random(); // How many loops to make
+		const drift = {
+			x: (Math.random() - 0.5) * 0.3, // Gradual x drift
+			y: (Math.random() - 0.5) * 0.3, // Gradual y drift
+		};
+
+		const animate = () => {
+
+			const elapsed = performance.now() - startTime;
+			const progress = elapsed / duration;
+
+			if(progress >= 1) {
+
+				this.pops.delete(touchId);
+				return;
+			
+			}
+
+			point.prevX = point.x;
+			point.prevY = point.y;
+
+			// Smooth curve motion with slight drift
+			const angle = progress * Math.PI * 2 * loops;
+
+			point.x = startX + Math.cos(angle) * radiusX + drift.x * elapsed;
+			point.y = startY + Math.sin(angle) * radiusY + drift.y * elapsed;
+
+			requestAnimationFrame(animate);
+		
+		};
+
+		animate();
+	
+	}
+
 	// SWIRLS
 
 	createSwirl(x, y, radius, params, dur, startAngle, ease) {
@@ -2113,11 +2385,13 @@ void main() {
 				Math.min(this.w,
 					this.h) * radius,
 				{
-					// touchRadius: 0.012,
-					// initialImpact: 0.13,
-					trailStrength: 0.08,
-					trailSpread: 0.06,
-					speed: 2.2,
+					// touchRadius: 0.02,
+					// touchDamping: 0.995,
+					// initialImpact: 0.32,
+					// trailStrength: 1.2,
+					// trailSpread: 1.6,
+					// trailAngle: 500,
+					speed: 2.5,
 				},
 				3333,
 				((2 * Math.PI) / numSwirls) * i,
@@ -2193,8 +2467,9 @@ void main() {
 			prevY: y,
 			...this.pointOptions(),
 			touchRadius: 0.01,
-			// initialImpact: 0.1,
-			trailStrength: 0.1,
+			touchDamping: 0.35,
+			initialImpact: 0.1,
+			// trailStrength: 0.1,
 		};
 
 		this.pops.set(dropId + "_impact",
@@ -2210,7 +2485,8 @@ void main() {
 				prevY: y,
 				...this.pointOptions(),
 				touchRadius: 0.04,
-				// initialImpact: 0.1,
+				touchDamping: 0.35,
+				initialImpact: 0.1,
 				// trailStrength: 0.1,
 				// trailSpread: 2.0
 			};
@@ -2290,7 +2566,7 @@ void main() {
 			point.x = this.w * (0.5 + point.scale * Math.sin(time));
 			point.y = this.h * (0.5 + point.scale * Math.cos(time * 1.5));
 
-			requestAnimationFrame(animate);
+			window.requestAnimationFrame(animate);
 		
 		};
 
