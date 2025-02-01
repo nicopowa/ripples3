@@ -750,8 +750,7 @@ void main() {
 		this.sizeBase = Math.max(this.ww,
 			this.wh) / this.sizeRef;
 
-		this.deltaTime
-			= this.DELTA_TIMESTEP * (this.baseScale / this.displayScale);
+		this.deltaTime = this.DELTA_TIMESTEP * (this.baseScale / this.displayScale);
 
 		if(DEBUG)
 			console.log(
@@ -1912,12 +1911,12 @@ void main() {
 				window.location.reload());
 
 		const pointerEvents = {
-			touchstart: this.dontTouchMe,
-			pointerdown: this.handlePointerStart,
-			pointermove: this.handlePointerMove,
-			pointerup: this.handlePointerEnd,
-			pointerout: this.handlePointerEnd,
-			pointercancel: this.handlePointerEnd,
+			"touchstart": this.dontTouchMe,
+			"pointerdown": this.handlePointerStart,
+			"pointermove": this.handlePointerMove,
+			"pointerup": this.handlePointerEnd,
+			"pointerout": this.handlePointerEnd,
+			"pointercancel": this.handlePointerEnd,
 		};
 
 		Object.keys(pointerEvents)
