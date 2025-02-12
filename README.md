@@ -35,6 +35,8 @@ Liquid code experiments
 - Reduced code duplication
 - Removed dead code
 
+[uncompiled dev version](https://nicopowa.github.io/ripples3/dev.html)
+
 ## What's next
 
 - Optimize JS & shaders
@@ -96,9 +98,9 @@ framerate x render
 
 ## Previous experiments
 
-### [n°122 — Liquid brain](https://nicopowa.github.io/ripples3/index122.html)
+### [n°122 — Liquid brain](https://nicopowa.github.io/ripples3/index122.html) / [dev](https://nicopowa.github.io/ripples3/dev122.html)
 
-### [n°064 — Be water](https://nicopowa.github.io/ripples3/index64.html)
+### [n°064 — Be water](https://nicopowa.github.io/ripples3/index64.html) / [dev](https://nicopowa.github.io/ripples3/dev64.html)
 
 
 ## Vanilla

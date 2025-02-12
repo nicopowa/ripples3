@@ -119,8 +119,8 @@ canvas {
 	z-index: 10;
 	cursor: pointer;
 	background-color: var(--bcck);
-	-webkit-mask-image: url("../assets/gear.png");
-	mask-image: url("../assets/gear.png");
+	-webkit-mask-image: url("../../assets/gear.png");
+	mask-image: url("../../assets/gear.png");
 	mask-repeat: no-repeat;
 	mask-size: contain;
 	box-shadow: 1px 1px 2px var(--col);
