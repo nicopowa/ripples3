@@ -18,78 +18,54 @@ const handleError = err => {
 };
 
 const lazy = (cb, ms = 256) =>
-	setTimeout(
-		cb,
-		ms + Math.round(Math.random() * ms)
-	);
+	setTimeout(cb,
+		ms + Math.round(Math.random() * ms));
 
-window.addEventListener(
-	"load",
+window.addEventListener("load",
 	() => {
 
-		console.log("https://github.com/nicopowa/ripples3");
+		if(DEBUG)
+			console.log("ripples3");
 
-		window.addEventListener(
-			"error",
+		window.addEventListener("error",
 			evt => {
 
 				handleError(evt.error);
 				return false;
 	
-			}
-		);
+			});
 
-		window.addEventListener(
-			"unhandledrejection",
+		window.addEventListener("unhandledrejection",
 			evt => {
 
 				handleError(evt.reason);
 				return false;
 	
-			}
-		);
+			});
 
 		try {
 
-			const liquify = new Liquid();
+			const liquify = new Liquid("assets/img.webp");
 			const amplify = new Params(liquify);
 
 			liquify
-			.flow(
-				amplify,
-				amplify.hashParams()
-			)
+			.flow(amplify,
+				amplify.hashParams())
 			.then(() => {
 
 				if(DEBUG)
 					console.log("flowing");
 
-				lazy(
-					() => {
-
-						// liquify.snailIt();
-						// liquify.circleIt();
-						// if(!liquify.isTouched) liquify.dropIt();
-						/*lazy(
+				lazy(() => {
+				// if(!liquify.isTouched) liquify.dropIt();
+				/*lazy(
 							() => {
 								if(!liquify.isTouched) liquify.curveIt();
 							}, 
 							1000
 						);*/
-
-						/*setInterval(
-							() => 
-								liquify.dropIt(
-									liquify.w / 2, 
-									liquify.h / 2, 
-									111
-								),
-							2222
-						);*/
-					
-					},
-					500
-				);
+				},
+				500);
 			
 			})
 			.catch(err =>
@@ -102,8 +78,7 @@ window.addEventListener(
 	
 		}
 
-	}
-);
+	});
 
 /**
  * @class Liquid : liquify all the pixels
@@ -112,18 +87,19 @@ class Liquid {
 
 	/**
 	 * @construct
+	 * @param {string} imagePath : background image url
 	 */
-	constructor() {
+	constructor(imagePath) {
 
-		this.BASE_SCALE = 2.0; // ref scale
-		this.REF_SIZE = 1024;   // ref size
-		this.MAX_SCALE = 2.0;  // Max display scale 
+		this.sizeRef = 960; // ref size
+		this.baseScale = 2.0; // ref scale
+
 		// this.MAX_SCALE = Math.min(window.devicePixelRatio || 1, 2); // default device scale
-		this.MIN_SCALE = 1.0;  // Min display scale
-		this.STEP = 1000 / 60; // 60 FPS fixed timestep
+		this.MAX_SCALE = 2.0; // hardcoded max scale
+		this.MIN_SCALE = 1.0; // min scale
 
-		// this.DISP_SCALE = this.MIN_SCALE; // start low and go up
-		this.DISP_SCALE = this.MAX_SCALE; // start high and go down
+		// this.displayScale = this.MIN_SCALE; // start low and go up
+		this.displayScale = this.MAX_SCALE; // start high and go down
 
 		this.TARGET_FPS = 55; // downscale if less
 		this.SCALE_CHECK_INTERVAL = 1000; // perf check interval
@@ -137,65 +113,61 @@ class Liquid {
 		this.LOOP_COUNT = 0; // check loops count
 		this.DOWN_FROM = this.MAX_SCALE; // prevent upscale loop
 
-		this.STEP_INV = 1 / this.STEP;
-
 		this.FIXED_TIMESTEP = 1000.0 / 60.0; // frame time 16.667
 		this.DELTA_TIMESTEP = this.FIXED_TIMESTEP / 1000;
 
-		this.ww // innerWidth
-			= this.wh = 0; // innerHeight
+		this.ww // window.innerWidth
+			= this.wh = 0; // window.innerHeight
 
 		this.sizeBase = 0;
+		this.scaleBase = this.displayScale / this.baseScale;
 
 		this.syncSize();
 
-		this.params = {
-			img: "assets/img.webp",
-			waveSpeed: 0.997,
-			damping: 0.996,
-			propagationSpeed: 10,
-			refraction: 0.8,
-			waterHue: 0.619,
-			waterTint: [0, 0.286, 1],
-			tintStrength: 0.1,
-			specularStrength: 0.7,
-			roughness: 0.16,
-			fresnelEffect: 1.2,
-			fresnelPower: 2.6,
-			specularPower: 39,
-			reflectionFresnel: 1,
-			reflectionBlur: 0.2,
-			reflectionDistortion: 0.5,
-			skyHue: 0.583,
-			skyColor: [0, 0.502, 1],
-			depthFactor: 2,
-			atmosphericScatter: 0.2,
-			envMapIntensity: 0.7,
-			touchRadius: 0.027,
-			initialImpact: 0.36,
-			trailStrength: 0.25,
-			trailSpread: 0.3,
-			causticStrength: 0.15,
-			causticScale: 1.4,
-			causticSpeed: 0.02,
-			causticBrightness: 0.42,
-			causticDetail: 2.5,
-			sunDirection: [0.624, 0.332, 0.707],
-			sunAngle: 28,
-			sunHeight: 63,
-			lightDirection: [0.659, -0.534, 0.53],
-			lightAngle: 175,
-			lightHeight: 60,
-			sunIntensity: 6,
-			sunHue: 0.52,
-			lightIntensity: 1.2,
-			lightHue: 0.52,
-			waveReflectionStrength: 0.6,
-			mirrorReflectionStrength: 0.3,
-			velocityReflectionFactor: 0.15
-		};
+		this.img = imagePath; // background image url
 
-		this.img = this.params.img;
+		this.params = {
+			waveSpeed: 0.997,
+			damping: 0.992,
+			propagationSpeed: 8.0,
+			refraction: 0.8,
+			waterTint: new Float32Array([0.04, 0.06, 0.11]),
+			tintStrength: 0.02,
+			specularStrength: 0.56,
+			roughness: 0.16,
+			waterHue: 0.58,
+			fresnelEffect: 0.8,
+			fresnelPower: 0.35,
+			specularPower: 39.0,
+			reflectionFresnel: 0.6,
+			reflectionBlur: 0.0,
+			reflectionDistortion: 6.0,
+			skyColor: new Float32Array([0.78, 0.89, 1.0]),
+			skyHue: 0.62,
+			depthFactor: 0.12,
+			atmosphericScatter: 0.27,
+			envMapIntensity: 0.08,
+			touchRadius: 0.023,
+			initialImpact: 0.42,
+			trailStrength: 0.1,
+			trailSpread: 0.2,
+			causticStrength: 0.25,
+			causticScale: 1.0,
+			causticSpeed: 0.15,
+			causticBrightness: 0.5,
+			causticDetail: 3.0,
+			sunDirection: new Float32Array([0.35, 0.65, 0.45]),
+			// sunTheta: 0.1,
+			// sunPhi: 0.1,
+			secondarySunDirection: new Float32Array([-0.45, 0.55, 0.45]),
+			// secondarySunTheta: 0.65,
+			// secondarySunPhi: 0.3,
+			sunIntensity: 5.0,
+			secondaryIntensity: 2.0,
+			waveReflectionStrength: 0.2,
+			mirrorReflectionStrength: 0.16,
+			velocityReflectionFactor: 0.05,
+		};
 
 		this.amplify
 			= this.hitting
@@ -239,9 +211,8 @@ class Liquid {
 		this.isLiquid = false; // init state
 		this.isRunning = false; // render loop state
 		this.isVisible = true; // visibility state
-		this.isFocused = true; // focus state
 		this.isTouched = false; // first touch
-		this.isAuto = false; // auto touch
+		this.isAutoTouching = false;
 
 		this.isRaining = false;
 		this.lastRainDrop = 0;
@@ -250,52 +221,35 @@ class Liquid {
 		this.activeRaindrops = null;
 
 		this.pops = new Map(); // pointers
-		this.deltaTime = 1;
+		this.deltaTime = 0;
 		this.accumulatedTime = 0;
 		this.fish = []; // underwater imgs
 
 		this.infos = null;
 
 		this.cvs = document.createElement("canvas");
-		this.cvs.style.opacity = "0";
+		this.cvs.style.opacity = 0;
 		document.body.appendChild(this.cvs);
 	
 	}
 
-	async load(preset) {
+	load(preset) {
 
 		if(DEBUG)
 			console.log("load params");
 
-		const changeBackground = preset.img && preset.img != this.img;
-	
 		this.stopPerfCheck();
-		this.renderText("loading");
 
-		if(changeBackground) {
-
-			await this.fadeCanvas(0);
-			this.img = preset.img;
-			this.image = await this.loadImage(this.img);
-			this.updateBackgroundTexture();
-
-		}
+		this.renderText("load params");
 
 		this.resetWaterState();
-	
+
 		this.params = {
 			...this.params,
-			...preset
+			...preset,
 		};
-	
+
 		this.syncUniforms();
-
-		// stoopid double check
-		if(changeBackground) {
-
-			await this.fadeCanvas(1);
-		
-		}
 
 		this.startPerfCheck();
 	
@@ -306,7 +260,7 @@ class Liquid {
 		this.amplify = amplify;
 		this.params = {
 			...this.params,
-			...params
+			...params,
 		};
 
 		this.infos = document.querySelector("#fps");
@@ -327,18 +281,16 @@ class Liquid {
 			this.syncTextures,
 			this.syncUniforms,
 			this.setupEvents,
-			this.startRenderLoop
+			this.startRenderLoop,
 		];
 
 		return initSequence
 		.map(fn =>
 			fn.bind(this))
-		.reduce(
-			(prv, cur) =>
-				prv.then(() =>
-					cur()),
-			Promise.resolve()
-		)
+		.reduce((prv, cur) =>
+			prv.then(() =>
+				cur()),
+		Promise.resolve())
 		.then(() => {
 
 			return this.fadeCanvas(1)
@@ -378,16 +330,26 @@ class Liquid {
 		const imgSize = 36;
 		const imgOff = 6;
 
-		// underwater github logo 
+		/*this.fish
+		.push({
+			i: await this.loadImage("assets/gear.png"),
+			c: () => ({
+				x: imgOff,
+				y: imgOff,
+				w: imgSize,
+				h: imgSize
+			})
+		});*/
+
 		this.fish.push({
 			i: await this.loadImage("assets/github-mark-white.png"),
 			c: () =>
 				({
-					x: this.w - (imgSize + imgOff) * this.DISP_SCALE,
-					y: imgOff * this.DISP_SCALE,
-					w: imgSize * this.DISP_SCALE,
-					h: imgSize * this.DISP_SCALE
-				})
+					x: this.w - (imgSize + imgOff) * this.displayScale,
+					y: imgOff * this.displayScale,
+					w: imgSize * this.displayScale,
+					h: imgSize * this.displayScale,
+				}),
 		});
 	
 	}
@@ -398,19 +360,15 @@ class Liquid {
 
 			const i = new Image();
 
-			i.addEventListener(
-				"load",
+			i.addEventListener("load",
 				() =>
-					imgLoaded(i)
-			);
-			i.addEventListener(
-				"error",
+					imgLoaded(i));
+			i.addEventListener("error",
 				() => {
 
 					throw new Error("image load error " + imgSrc);
 			
-				}
-			);
+				});
 			i.crossOrigin = "Anonymous";
 			i.src = imgSrc;
 		
@@ -429,13 +387,11 @@ class Liquid {
 			depth: false,
 			stencil: false,
 			powerPreference: "high-performance",
-			preserveDrawingBuffer: false
+			preserveDrawingBuffer: false,
 		};
 
-		this.gl = this.cvs.getContext(
-			"webgl2",
-			contextOptions
-		);
+		this.gl = this.cvs.getContext("webgl2",
+			contextOptions);
 		if(!this.gl)
 			throw new Error("webgl2 not supported");
 
@@ -517,7 +473,7 @@ void main() {
 
 	float sum = 0.0;
 	for(int i = 0; i < 8; i++) {
-		float angle = float(i) * 0.785398163; // PI / 4
+		float angle = float(i) * 0.785398163; // PI/4
 		vec2 dir = vec2(cos(angle), sin(angle));
 		vec2 sampleOffset = dir * pixel * uPropagationSpeed;
 		vec2 sampleCoord = texCoord + sampleOffset;
@@ -577,9 +533,10 @@ uniform sampler2D uWaterHeight;
 uniform sampler2D uBackgroundTexture;
 uniform sampler2D uPreviousState;
 uniform vec3 uSunDirection;
-uniform vec3 uLightDirection;
+uniform vec3 uSecondarySunDirection;
 uniform float uSunIntensity;
-uniform float uLightIntensity;
+uniform float uSecondaryIntensity;
+uniform float uRefraction;
 uniform vec3 uWaterTint;
 uniform float uTintStrength;
 uniform float uSpecularStrength;
@@ -602,7 +559,6 @@ uniform float uWaveReflectionStrength;
 uniform float uMirrorReflectionStrength;
 uniform float uVelocityReflectionFactor;
 uniform float uReflectionBlur;
-uniform float uRefraction;
 
 in vec2 texCoord;
 out vec4 fragColor;
@@ -611,74 +567,54 @@ vec3 getNormal(vec2 uv, vec2 pixel) {
 	vec4 data = texture(uWaterHeight, uv);
 	float height = data.r;
 	float oldHeight = data.g;
-	float velocity = (height - oldHeight) * uDisplayScale;
+	float velocity = (height - oldHeight);
 	
-	float s = 2.0;
-	float l1 = texture(uWaterHeight, clamp(uv - vec2(pixel.x * s, 0.0), 0.0, 1.0)).r;
-	float r1 = texture(uWaterHeight, clamp(uv + vec2(pixel.x * s, 0.0), 0.0, 1.0)).r;
-	float t1 = texture(uWaterHeight, clamp(uv - vec2(0.0, pixel.y * s), 0.0, 1.0)).r;
-	float b1 = texture(uWaterHeight, clamp(uv + vec2(0.0, pixel.y * s), 0.0, 1.0)).r;
+	float l = texture(uWaterHeight, clamp(uv - vec2(pixel.x, 0.0), 0.0, 1.0)).r;
+	float r = texture(uWaterHeight, clamp(uv + vec2(pixel.x, 0.0), 0.0, 1.0)).r;
+	float t = texture(uWaterHeight, clamp(uv - vec2(0.0, pixel.y), 0.0, 1.0)).r;
+	float b = texture(uWaterHeight, clamp(uv + vec2(0.0, pixel.y), 0.0, 1.0)).r;
 	
-	float l2 = texture(uWaterHeight, clamp(uv - vec2(pixel.x, pixel.y), 0.0, 1.0)).r;
-	float r2 = texture(uWaterHeight, clamp(uv + vec2(pixel.x, pixel.y), 0.0, 1.0)).r;
-	float t2 = texture(uWaterHeight, clamp(uv + vec2(pixel.x, -pixel.y), 0.0, 1.0)).r;
-	float b2 = texture(uWaterHeight, clamp(uv + vec2(-pixel.x, pixel.y), 0.0, 1.0)).r;
-	
-	float dx = ((l1 - r1) * 2.0 + (l2 - r2)) / 3.0;
-	float dy = ((t1 - b1) * 2.0 + (t2 - b2)) / 3.0;
-	
+	// display and velocity scale
 	float normalStrength = 1.0 + abs(velocity) * 2.0;
 	return normalize(vec3(
-		dx * normalStrength * uDisplayScale,
-		dy * normalStrength * uDisplayScale,
+		(l - r) * normalStrength * uDisplayScale,
+		(t - b) * normalStrength * uDisplayScale,
 		1.0
 	));
 }
 
 vec3 sampleBlurredReflection(vec2 uv, float radius, vec2 pixel) {
-	// gaussian melting cpu ?
-	int kernelSize = 5;
-	float sigma = 2.0;
-	float pi = 3.14159265359;
-	
 	vec3 color = vec3(0.0);
-	float totalWeight = 0.0;
+	float total = 0.0;
+	int samples = 9;
 	
-	for (int i = -2; i <= 2; i++) {
-		for (int j = -2; j <= 2; j++) {
-			float dist = sqrt(float(i * i + j * j));
-			float weight = exp(-(dist * dist) / (2.0 * sigma * sigma)) / (2.0 * pi * sigma * sigma);
-			
-			vec2 sampleUv = clamp(uv + vec2(float(i), float(j)) * radius * pixel, 0.0, 1.0);
+	for(int x = -1; x <= 1; x++) {
+		for(int y = -1; y <= 1; y++) {
+			vec2 offset = vec2(float(x), float(y)) * radius * pixel;
+			vec2 sampleUv = clamp(uv + offset, 0.0, 1.0);
 			sampleUv.y = 1.0 - sampleUv.y;
 			
+			float weight = 1.0 - length(vec2(x, y)) / 2.0;
 			color += texture(uBackgroundTexture, sampleUv).rgb * weight;
-			totalWeight += weight;
+			total += weight;
 		}
 	}
 	
-	return color / totalWeight;
+	return color / total;
 }
 
 float getReflection(vec3 normal, vec3 lightDir, vec3 viewDir, float velocity) {
 	vec3 halfDir = normalize(lightDir + viewDir);
-	float NdotH = max(dot(normal, halfDir), 0.0);
-	float pi = 3.14159265359;
+	float specDot = max(dot(normal, halfDir), 0.0);
 	
-	float alpha = uRoughness * uRoughness;
-	float alpha2 = alpha * alpha;
-	float NdotH2 = NdotH * NdotH;
+	// specular calculation
+	float roughDot = pow(specDot, uSpecularPower * (1.0 - uRoughness));
+	float mirrorSpec = pow(specDot, 256.0) * 4.0 * uMirrorReflectionStrength * 2.0;
+	float waveSpec = roughDot * (abs(velocity) * 12.0 + 0.8) * uWaveReflectionStrength * 1.5;
 	
-	float denom = NdotH2 * (alpha2 - 1.0) + 1.0;
-	float D = alpha2 / (pi * denom * denom);
+	float velocityFactor = 1.0 + abs(velocity) * uVelocityReflectionFactor * 4.0;
 	
-	// separate mirror & wave reflections
-	float mirrorSpec = D * uMirrorReflectionStrength;
-	float waveSpec = pow(NdotH, uSpecularPower) * (1.0 + abs(velocity) * 8.0) * uWaveReflectionStrength;
-	
-	// then blend
-	float velocityFactor = smoothstep(0.0, 1.0, abs(velocity) * uVelocityReflectionFactor);
-	return mix(mirrorSpec, waveSpec, velocityFactor) * uSpecularStrength;
+	return (mirrorSpec + waveSpec) * uSpecularStrength * velocityFactor;
 }
 
 void main() {
@@ -691,86 +627,62 @@ void main() {
 	float velocity = (height - oldHeight);
 	
 	vec3 normal = getNormal(texCoord, pixel);
-	float depth = clamp(height * uDepthFactor, 0.0, 1.0);
+	float depth = 1.0 - (height * uDepthFactor);
 	
-	// distortion smoothing based on velocity
-	float distortionFactor = smoothstep(0.0, 1.0, abs(velocity));
-	vec2 refractOffset = normal.xy * (uRefraction + distortionFactor * 0.3);
+	// refraction with velocity influence
+	vec2 refractOffset = normal.xy * (uRefraction + abs(velocity) * 0.5);
 	vec2 bgCoord = clamp(texCoord + refractOffset, 0.0, 1.0);
 	
-	float viewAngleBlur = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.0);
-	float blurRadius = uReflectionBlur * (1.0 + distortionFactor * 2.0 + viewAngleBlur);
+	// blur based on depth and velocity
+	float blurRadius = uReflectionBlur * (1.0 + abs(velocity) * 5.0);
 	vec3 refractColor = sampleBlurredReflection(bgCoord, blurRadius, pixel);
 	
-	// water color with depth (broken ?)
-	float waterDepth = smoothstep(0.0, 1.0, depth);
-	float scatter = clamp(waterDepth * uAtmosphericScatter, 0.0, 1.0);
-	vec3 waterColor = mix(refractColor, uWaterTint, uTintStrength * (scatter + 0.2));
+	// atmospheric scattering
+	float scatter = 1.0 - exp(-depth * uAtmosphericScatter);
+	vec3 waterColor = mix(refractColor, uWaterTint, uTintStrength + scatter * 0.5);
 	
+	// caustics
 	float caustic = 0.0;
-	if (uCausticStrength > 0.0) {
-		float detailScale = uCausticDetail * 10.0;
-		float scaledTime = uTime * uCausticSpeed;
-		
-		// noise detail killing cpu ?
-		for (float i = 1.0; i <= 2.0; i++) {
-			float scale = i * uCausticScale;
-			vec2 causticsUV = texCoord * scale + normal.xy * uReflectionDistortion;
-			float timeOffset = scaledTime * i * 0.5;
-			
-			vec2 warp = vec2(
-				sin(causticsUV.y * 2.0 + timeOffset),
-				sin(causticsUV.x * 2.0 + timeOffset * 1.3)
-			);
-			
-			causticsUV += warp * 0.1;
-			
-			float pattern = sin(causticsUV.x * detailScale + timeOffset) * 
-						  sin(causticsUV.y * detailScale + timeOffset * 1.3);
-			
-			caustic += pattern * (1.0/i);
-		}
-		caustic = caustic * 0.5 + 0.5;
+	float detailScale = uCausticDetail * 10.0;
+	
+	for(float i = 1.0; i <= 2.0; i++) {
+		vec2 causticsUV = texCoord * uCausticScale * i + normal.xy * uReflectionDistortion;
+		float detailFreq = detailScale * i;
+		caustic += (sin(causticsUV.x * detailFreq + uTime * uCausticSpeed * i) * 
+				   sin(causticsUV.y * detailFreq + uTime * uCausticSpeed * i)) * (1.0/i);
 	}
+	caustic = caustic * 0.5 + 0.5;
 	
 	vec3 finalColor = waterColor;
 	
+	// fresnel effect with velocity influence
 	float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), uFresnelPower) * uFresnelEffect;
-	fresnel = smoothstep(0.0, 1.0, fresnel);
 	
-	// light reflections
+	// combine lighting
 	vec3 sunRefl = vec3(1.0, 0.97, 0.92) * getReflection(normal, normalize(uSunDirection), viewDir, velocity) * uSunIntensity;
-	vec3 secondaryRefl = vec3(0.97, 0.99, 1.0) * getReflection(normal, normalize(uLightDirection), viewDir, velocity) * uLightIntensity;
+	vec3 secondaryRefl = vec3(0.98, 0.99, 1.0) * getReflection(normal, normalize(uSecondarySunDirection), viewDir, velocity) * uSecondaryIntensity;
 	
-	// blend env reflections
 	vec3 envRefl = mix(uSkyColor, vec3(1.0), fresnel) * uEnvMapIntensity;
 	
 	finalColor += sunRefl + secondaryRefl;
 	finalColor += envRefl * fresnel * uReflectionFresnel;
 	
-	// depth attenuated caustics (CPU ?)
-	if (uCausticStrength > 0.0) {
-		float causticAttenuation = smoothstep(1.0, 0.0, waterDepth * 2.0);
-		float causticBlend = causticAttenuation * (1.0 - scatter * 0.5); // underwater scatter
-		finalColor += vec3(1.0, 0.97, 0.9) * caustic * uCausticStrength * uCausticBrightness * causticBlend;
-	}
+	// depth attenuated caustics
+	finalColor += vec3(1.0, 0.97, 0.9) * caustic * uCausticStrength * uCausticBrightness * (1.0 - scatter);
 	
-	fragColor = vec4(clamp(finalColor, 0.0, 1.0), 1.0);
+	finalColor = clamp(finalColor, 0.0, 1.0);
+	fragColor = vec4(finalColor, 1.0);
 }`;
 
 		if(DEBUG)
 			console.log("physics program");
-		this.physicsProgram = this.createProgram(
-			VERTEX_SHADER,
-			PHYSICS_SHADER
-		);
+		this.physicsProgram = this.createProgram(VERTEX_SHADER,
+			PHYSICS_SHADER);
 
 		if(DEBUG)
 			console.log("render program");
-		this.renderProgram = this.createProgram(
-			VERTEX_SHADER,
-			RENDER_SHADER
-		);
+		this.renderProgram = this.createProgram(VERTEX_SHADER,
+			RENDER_SHADER);
 	
 	}
 
@@ -782,31 +694,35 @@ void main() {
 		// https://ctrl-alt-test.fr/minifier/?main
 		// https://github.com/laurentlb/shader-minifier
 
-		const VERTEX_SHADER = await this.decompress("H4sIAAAAAAAAClMuSy0qzszPUzA2MFBILebKzFMoS002UijIL84syczPs84vLYGIlKRWOOfnF6VYl+VnpijkJmbmaWhWwwRtYeq19Ey19Uyt03PiA6AitmWpySYaMHkdAx1DTetaAIBqaOZ3AAAA");
-
-		const PHYSICS_SHADER = await this.decompress("H4sIAAAAAAAACoVUTW+bQBC991cgVYpYvMZgJ20qQg6Ne+vBiqP2EPmwgjGMBCzaD5c04r9XuyyE2JVyY2dn3rw385bPJxASeeNtosgD+akVkKENlFiUrXesOFPJeVSyuq1ArLeJbvDIRe2dIFt7+hEkr7RC3kwXFsDTW6gUe8IaqN6ibCv2ss9YBVTv8S98ZxKo/s1OsG8Bcqq3rG6xKajeCd6yghlEezXBTgw8vRNwQq7lXjEFZ4SeuM7K5zg6THFslAs/cN2oRCqhM+XZyKstarlEK2GgLliOWrqDVAKaQpXuqATDarxqBbA86adOFtL12jHBammJYDNwU9A9cC7yhGtlItfeUbDigVdcJCeOuVczbHzyaq+k0ZYq6JQW4L+XTEck4piUgEWpUlsTdskgCjuoUvPpx2Q1X5Rjr+s0CpMjF76ZEKZRgne3CS4W5HXIYE1RQWq/fSRB+PX2ZvPtNv6ySaSuFx9xW9jWGZe+xSFUYuM+SWDJBRfLJmGX9IZYjZ0/iKJS10EYr2+CdbgcBL7MnEOC0TpO1p+SKeOwtGadP1MddnR+eiFnyucOmc0gR6nSyjrAH5UFM6ClMxweyMr/qOVq8j6h0jyG/NFaLX1nGTyEzoF49E3/u3nuSAzrlmXqonK0ayBrzlUpFbT+vJxGITWYJAhvDP55vfX3fRReXeF9RNzzEHDa8ZHlMy7jA635CX5BNsUOS5fl1mDuf0Izjs6lk9W4HtPb5dzHsLx2rUxoiyJ1+auzcqr4jmOj0v+u4j0DVvGmeDJy0pwr31VS14EYAm8pd1E4DtZO4MfxCJlKoWv95bj9AWD5VhSMWJOq1cU8h3/EIoyimJBkWNriYmu2ZzDrHLjZBOEm6fvevrehOOn76a9hXve1L3VN3VuJaEyS/h+jh5Pl4gUAAA==");
-
-		const RENDER_SHADER = await this.decompress("H4sIAAAAAAAACp1XS4/bNhC+91cY6IWkaNqSs2gWKgs0cYIEaIIgTrJnVqJtbmRRpUivnMX+94IPPb3ebnqxzCHnyZlvhr8euaqFLGer5XLG618qxTPhCHux21ezbSGZTqfUmh2qgqtknZpSbKU6zI48S2bmM69lYbSQZbfhBMzMF3Hg2KxFXRXstMlYwbsTnbCZuWGaq3dc7PYam1cs+75T0pT5F95oozg2nxQ/CmnqjWaaD3WvZmZjyrVQPLPasfnLyujWU2s2pnxfal7WQp/C2W49EetM+iJKfe5RqTda8XKn99hsKp6Zgqme8lma3b7kdY3NW8Xrkhdvtlue6W75Sd5x1XOG5We+LbzR4diQtBa1lmrkUXD+++m1LKSaGrnmld6/ZZmWCps/9UHW1Z4rkW0yprVV96Y8fmDVIBivmam1yHo/WoK9s35VcZ53q1fKRtD7GkhrrpkosLlhR97b30v9IJSS6rGdb7yQmdCnQSCC/T3lVWH8WjF/v6L0Gah581pKlafSaEt5MdsqtvOhcZHacf1RqgMrgM/YI3bfSjS8gPeOI2eaUe1TDoxT8ghTH9jSyWiNpjGJ2N81AJaVNHP3OUE0yneIEpIqro0qA7v4wa0VKwDAo+qygh0qYI5zayJwJpIGJQQvIV4SHBMISTN/kjV6itVaFD1b9f/ROVQGFyuCxnEbBwg/KwxL7L05oYT8pEkXWJ8RhlEY8TyI+Un185b/nP0ZwYkhTB9cCnu8tCWgeN7XRJfQPkMVy4Wpp9m9mmW2FqhLu2WbzVpqVtw4m+mSpFupgCj1TNB5korfaZKKKIIt9dZSby31NorgvZeQi1rT+h+lgVsDgUR0i24hTN0Obyowt/+Q/Vm8JHABEoJYJmswj4m9AXsnqbPW+/f1SMfhC4Kh9w/cQoi8j8i5F4KZttzkRGMy71epczzqC/u8vbSHIWlOP5yl6SAyEXWUh1DCTtxisJ8++FDsuB5fyiqUO3b/i9CY/Ooo+J1deNZjgL42qh9zqd/RA2tALjUIUnrsaEVFQQq0GQUxK6o9o33/Qf3f1O0h6j7h8nNeygN1qpD/BW7b3ksUd5B1EI2nL0B/bY7X/0J0GdMreQec6Em3gwgE5Ow8Ry8JRJe6Rn2QUu9rzSvgbhuPWS+2DgjRWYNOH45S5LMDEyVwpRHKhLpki+FiOMwM74pOwHuJl644Xe/Yu1RYX+wgbX9qK8+fpz0baXDrUKDOB5undJBPtO9lrVgPLa3wvJsWfBjo0/GDabDm7JgvRL+LRjNFQLCgsPZTBR2ff2Ts8Gw487OCxRyxBdPR448l6eDFTRMOCOl4wkDxkuDabuR2xKRu0ESjMcXhmZcjaEwcohEHafed2QWnAo1GHY9FwcL66zfaxhi545G/A9Kc0OPzmRfaW4YEIlde6B1TlU+zWpSgV+EaU+RYIJ5sNd0WiskKwrTfi6gViEjc6pxyDqIXpKMzxWdnnJpWS+QdseW6EDB9aC8ufBG5ishVaE9bUbLCTVzUYsalbuVzpA3qIJxgMNdF0xRGZNW2zek86LDk7HxCIos+MZlPYLTFTAeZCYEw1A7uJ348mvERCOkdkST0taeL6xl6R08BiMYPBZgOQtn/jRzqxJhc/4bJdQLRuOGcdYnRwwi2+vEANoevIS/dy77G8X9LHz+0HpU/fl9FNiu6Bwv23kA8jSdE07cJOrvc88fSJRwZhI+O4gdRm8NTNnT+ukFgcMkxsYkYQC4hrpfNQ4ogcmVBsX16WJUvQsb3lrR5HMP04V/CgG7Fhw8AAA==");
-		
-		this.physicsProgram = this.createProgram(
-			VERTEX_SHADER,
-			PHYSICS_SHADER
+		const VERTEX_SHADER = await this.decompress(
+			"H4sIAAAAAAAAClMuSy0qzszPUzA2MFBILebKzFMoS002UijIL84syczPs84vLYGIlKRWOOfnF6VYl+VnpijkJmbmaWhWwwRtYeq19Ey19Uyt03PiA6AitmWpySYaMHkdAx1DTetaAIBqaOZ3AAAA"
 		);
 
-		this.renderProgram = this.createProgram(
-			VERTEX_SHADER,
-			RENDER_SHADER
+		const PHYSICS_SHADER = await this.decompress(
+			"H4sIAAAAAAAACoVUTW+bQBC991cgVYpYvMZgJ20qQg6Ne+vBiqP2EPmwgjGMBCzaD5c04r9XuyyE2JVyY2dn3rw385bPJxASeeNtosgD+akVkKENlFiUrXesOFPJeVSyuq1ArLeJbvDIRe2dIFt7+hEkr7RC3kwXFsDTW6gUe8IaqN6ibCv2ss9YBVTv8S98ZxKo/s1OsG8Bcqq3rG6xKajeCd6yghlEezXBTgw8vRNwQq7lXjEFZ4SeuM7K5zg6THFslAs/cN2oRCqhM+XZyKstarlEK2GgLliOWrqDVAKaQpXuqATDarxqBbA86adOFtL12jHBammJYDNwU9A9cC7yhGtlItfeUbDigVdcJCeOuVczbHzyaq+k0ZYq6JQW4L+XTEck4piUgEWpUlsTdskgCjuoUvPpx2Q1X5Rjr+s0CpMjF76ZEKZRgne3CS4W5HXIYE1RQWq/fSRB+PX2ZvPtNv6ySaSuFx9xW9jWGZe+xSFUYuM+SWDJBRfLJmGX9IZYjZ0/iKJS10EYr2+CdbgcBL7MnEOC0TpO1p+SKeOwtGadP1MddnR+eiFnyucOmc0gR6nSyjrAH5UFM6ClMxweyMr/qOVq8j6h0jyG/NFaLX1nGTyEzoF49E3/u3nuSAzrlmXqonK0ayBrzlUpFbT+vJxGITWYJAhvDP55vfX3fRReXeF9RNzzEHDa8ZHlMy7jA635CX5BNsUOS5fl1mDuf0Izjs6lk9W4HtPb5dzHsLx2rUxoiyJ1+auzcqr4jmOj0v+u4j0DVvGmeDJy0pwr31VS14EYAm8pd1E4DtZO4MfxCJlKoWv95bj9AWD5VhSMWJOq1cU8h3/EIoyimJBkWNriYmu2ZzDrHLjZBOEm6fvevrehOOn76a9hXve1L3VN3VuJaEyS/h+jh5Pl4gUAAA=="
 		);
+
+		const RENDER_SHADER = await this.decompress(
+			"H4sIAAAAAAAACpVWS3PbNhC+91dwphcAhGBRttp4EB5qK57mkE7GcpMzSoESJhTBgoBMJqP/3gHAB6hH655ILLmLb1/f7s8Hrmohy+h2Po94/VOleCacYCe2uyrKC8k0PZXWbF8VXC1W1JQil2ofHXi2iMwzr2VhtJDl8MEZiMyL2HNsVqKuCtauM1bw4Y/BWGS+Ms3V71xsdxqbB5Z92yppys0Lb7RRHJvPih+ENPVaM83Du28jszblSiie2duxWfNMlhum2lB8Cmptyo+l5mUtdBuoBLJnnis21fW3OaQvotTnjpZ6rRUvt3qHzbrimSmYGiXP0mx3Ja9rbJ4Ur0tefMhznunh+Fm+cjVqdsdnnhfeie63ULQStZbqAsr1t/ZRFlKdglzxSu+eWKalwuY3vZd1teNKZOuMaW2v+1AePrEqCMQjM7UW2ehHL7CpHE8V55vh9KBsIr2vnWjFNRMFNl/ZgY/4R6ufhFJSXfryhRcyE7oNAtHhHyUPhVFUlL4YNW8epVQbKo22krsoV2zrw+Gis+X6D6n2rAC+eA/YPSvR8AL+cBobplmqffWBaXUeIPXBLJ2NHmiakJj9VQOrSZqZe7QQLQhVXBtVdr+L79zeegvARetZwfYVMIeZRQQcItLgOcRzghMCIWlm/6oXX9WDaIoXTXoSvwXOHHvD7f+Ec0nvP+AkENKjS5YnCZtgxTdjxofU+VwothGmPs3jbZTZrKcu4PM+b1pqVqRzQnOpgCh11KSzhDbv04Q2cQx7aWulrZW2cezMLSKZ5zXX6dQ9ZxU00EMBLYTIw0EOSecz9bqkTRMy6987RK8uavZD4YLhnAMNbiG8WRDqnIjHcjznR28Pkqb9jrwx6ryM0+507IrQmbpx3+jRX77lehrW265UsXsvrP5KKH86CP5qD1710LUm/OHPdcWzldTpnjVgIzXo7IyV3xuLOzvQVgTsOgRU8hV0JvBi+QuB6I6gq8yAFiQONabEiUBCZiPnQoiA7c4BMUoWJCbvILrCSCghS4jOaNyajaeGrhIUuiO2iKXYRHsmStDVkCuK1GU4gTfh5AwjnJ7QxRzPXVM4dtq5pK6uclTPgH3F+//TUY00uHegk86Cjy0NqiAd2bI369sZ0t1QtrypAJglJPYiFM4ZiC4Mmh5Z5qdDOid44yaEa/90OjVQ0jWr1xFpQqh4ny4IFUNndobqP7+kPUw0GVVIxN4h0rTo8gj15j2OJ8X/TgNISNDuijitRQnG+0iDRpXY7TtoMhaRgOhEpX2DCkjIjYD02IeoeyKyjMnSZygXJSvcYEv3ogHXqNLTVR+WIAwgWHNOqpose7I+nbMXWmBJYFcTeNyP8GQj6iuDLCENM207OCGzE8bo6cGyw3Q/gmi6PdEgBt7PURC7zkkwuf8Vk/sFRFOqO2OnySYJexA4aPVwb/TWyf07TO7vcfIG65c208vXnC2ksc3vsNVh7xgMewai090NheV7vkdOowNRX1+nGx863+ocufqE9lVChx3LUttdkAWcQHr8BxvpwntuDAAA"
+		);
+
+		this.physicsProgram = this.createProgram(VERTEX_SHADER,
+			PHYSICS_SHADER);
+
+		this.renderProgram = this.createProgram(VERTEX_SHADER,
+			RENDER_SHADER);
 	
 	}
 
 	async decompress(b64Str, format = "gzip") {
 
-		return await new Response(new Response(Uint8Array.from(
-			atob(b64Str),
-			c =>
-				c.charCodeAt(0)
-		)).body.pipeThrough(new DecompressionStream(format)))
+		return await new Response(
+			new Response(
+				Uint8Array.from(atob(b64Str),
+					c =>
+						c.charCodeAt(0))
+			).body.pipeThrough(new DecompressionStream(format))
+		)
 		.text();
 	
 	}
@@ -816,10 +732,8 @@ void main() {
 		if(DEBUG)
 			console.log("init buffers");
 		this.vertexBuffer = this.gl.createBuffer();
-		this.gl.bindBuffer(
-			this.gl.ARRAY_BUFFER,
-			this.vertexBuffer
-		);
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER,
+			this.vertexBuffer);
 		this.gl.bufferData(
 			this.gl.ARRAY_BUFFER,
 			this.vertices,
@@ -833,12 +747,10 @@ void main() {
 		this.ww = window.innerWidth;
 		this.wh = window.innerHeight;
 
-		this.sizeBase = Math.max(
-			this.ww,
-			this.wh
-		) / this.REF_SIZE;
+		this.sizeBase = Math.max(this.ww,
+			this.wh) / this.sizeRef;
 
-		this.deltaTime = this.STEP * (this.BASE_SCALE / this.DISP_SCALE) * this.STEP_INV;
+		this.deltaTime = this.DELTA_TIMESTEP * (this.baseScale / this.displayScale);
 
 		if(DEBUG)
 			console.log(
@@ -852,18 +764,18 @@ void main() {
 
 	syncCanvas() {
 
-		// round ?
-		const cw = Math.round(this.ww * this.DISP_SCALE);
-		const ch = Math.round(this.wh * this.DISP_SCALE);
+		const cw = Math.round(this.ww * this.displayScale);
+		const ch = Math.round(this.wh * this.displayScale);
 
 		this.cvs.width = cw;
 		this.cvs.height = ch;
 
+		// this.cvs.style.width = this.ww + "px";
+		// this.cvs.style.height = this.wh + "px";
+
 		if(DEBUG)
-			console.log(
-				"canvas",
-				cw + "x" + ch
-			);
+			console.log("canvas",
+				cw + "x" + ch);
 	
 	}
 
@@ -871,14 +783,12 @@ void main() {
 
 		return new Promise(res => {
 
-			this.cvs.addEventListener(
-				"transitionend",
+			this.cvs.addEventListener("transitionend",
 				() =>
 					res(),
 				{
-					once: true
-				}
-			);
+					once: true,
+				});
 
 			this.cvs.style.opacity = op;
 		
@@ -888,22 +798,20 @@ void main() {
 
 	syncViewport() {
 
-		this.gl.viewport(
-			0,
+		this.gl.viewport(0,
 			0,
 			this.w,
-			this.h
-		);
+			this.h);
 	
 	}
 
 	syncUniforms() {
 
-		// if(DEBUG)console.log("sync uniforms");
-
-		// this.scaledPropagation = this.params.propagationSpeed * this.DISP_SCALE / this.BASE_SCALE;
-		// heaavy render glitch if not rounded ?
-		this.scaledPropagation = Math.round((this.params.propagationSpeed * this.DISP_SCALE) / this.BASE_SCALE);
+		if(DEBUG)
+			console.log("sync uniforms");
+		this.scaledPropagation = Math.round(
+			(this.params.propagationSpeed * this.displayScale) / this.baseScale
+		);															  
 	
 	}
 
@@ -925,14 +833,10 @@ void main() {
 		this.currentTexture = this.waterTexture1;
 		this.previousTexture = this.waterTexture2;
 
-		gl.bindFramebuffer(
-			gl.FRAMEBUFFER,
-			null
-		);
-		gl.bindTexture(
-			gl.TEXTURE_2D,
-			null
-		);
+		gl.bindFramebuffer(gl.FRAMEBUFFER,
+			null);
+		gl.bindTexture(gl.TEXTURE_2D,
+			null);
 	
 	}
 
@@ -941,10 +845,8 @@ void main() {
 		const gl = this.gl;
 		const texture = gl.createTexture();
 
-		gl.bindTexture(
-			gl.TEXTURE_2D,
-			texture
-		);
+		gl.bindTexture(gl.TEXTURE_2D,
+			texture);
 
 		gl.texImage2D(
 			gl.TEXTURE_2D,
@@ -958,27 +860,19 @@ void main() {
 			null
 		);
 
-		gl.texParameteri(
-			gl.TEXTURE_2D,
+		gl.texParameteri(gl.TEXTURE_2D,
 			gl.TEXTURE_MIN_FILTER,
-			gl.NEAREST
-		);
-		gl.texParameteri(
-			gl.TEXTURE_2D,
+			gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D,
 			gl.TEXTURE_MAG_FILTER,
-			gl.NEAREST
-		);
+			gl.NEAREST);
 
-		gl.texParameteri(
-			gl.TEXTURE_2D,
+		gl.texParameteri(gl.TEXTURE_2D,
 			gl.TEXTURE_WRAP_S,
-			gl.CLAMP_TO_EDGE
-		);
-		gl.texParameteri(
-			gl.TEXTURE_2D,
+			gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D,
 			gl.TEXTURE_WRAP_T,
-			gl.CLAMP_TO_EDGE
-		);
+			gl.CLAMP_TO_EDGE);
 
 		const waterError = gl.getError();
 
@@ -997,10 +891,8 @@ void main() {
 		const gl = this.gl;
 		const texture = gl.createTexture();
 
-		gl.bindTexture(
-			gl.TEXTURE_2D,
-			texture
-		);
+		gl.bindTexture(gl.TEXTURE_2D,
+			texture);
 
 		gl.texImage2D(
 			gl.TEXTURE_2D,
@@ -1014,27 +906,19 @@ void main() {
 			null
 		);
 
-		gl.texParameteri(
-			gl.TEXTURE_2D,
+		gl.texParameteri(gl.TEXTURE_2D,
 			gl.TEXTURE_MIN_FILTER,
-			gl.LINEAR
-		);
-		gl.texParameteri(
-			gl.TEXTURE_2D,
+			gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D,
 			gl.TEXTURE_MAG_FILTER,
-			gl.LINEAR
-		);
+			gl.LINEAR);
 
-		gl.texParameteri(
-			gl.TEXTURE_2D,
+		gl.texParameteri(gl.TEXTURE_2D,
 			gl.TEXTURE_WRAP_S,
-			gl.CLAMP_TO_EDGE
-		);
-		gl.texParameteri(
-			gl.TEXTURE_2D,
+			gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D,
 			gl.TEXTURE_WRAP_T,
-			gl.CLAMP_TO_EDGE
-		);
+			gl.CLAMP_TO_EDGE);
 
 		return texture;
 	
@@ -1045,10 +929,8 @@ void main() {
 		const gl = this.gl;
 		const framebuffer = gl.createFramebuffer();
 
-		gl.bindFramebuffer(
-			gl.FRAMEBUFFER,
-			framebuffer
-		);
+		gl.bindFramebuffer(gl.FRAMEBUFFER,
+			framebuffer);
 		gl.framebufferTexture2D(
 			gl.FRAMEBUFFER,
 			gl.COLOR_ATTACHMENT0,
@@ -1079,19 +961,19 @@ void main() {
 	
 	}
 
-	handleResize() {
+	debouncedResize() {
 
-		clearTimeout(this.sizing);
+		/*clearTimeout(this.sizing);
 
-		this.sizing = setTimeout(
-			() =>
-				this.doResize(),
-			128
-		);
+		this.sizing = setTimeout(() =>
+			this.handleResize(),
+		128);*/
+
+		this.handleResize();
 	
 	}
 
-	doResize() {
+	handleResize() {
 
 		if(DEBUG)
 			console.log("window resize");
@@ -1140,10 +1022,8 @@ void main() {
 
 		[this.waterTexture1, this.waterTexture2].forEach(texture => {
 
-			gl.bindTexture(
-				gl.TEXTURE_2D,
-				texture
-			);
+			gl.bindTexture(gl.TEXTURE_2D,
+				texture);
 			gl.texImage2D(
 				gl.TEXTURE_2D,
 				0,
@@ -1160,10 +1040,8 @@ void main() {
 
 		[this.framebuffer1, this.framebuffer2].forEach(framebuffer => {
 
-			gl.bindFramebuffer(
-				gl.FRAMEBUFFER,
-				framebuffer
-			);
+			gl.bindFramebuffer(gl.FRAMEBUFFER,
+				framebuffer);
 
 			if(
 				gl.checkFramebufferStatus(gl.FRAMEBUFFER)
@@ -1176,10 +1054,8 @@ void main() {
 		
 		});
 
-		gl.bindFramebuffer(
-			gl.FRAMEBUFFER,
-			null
-		);
+		gl.bindFramebuffer(gl.FRAMEBUFFER,
+			null);
 	
 	}
 
@@ -1197,14 +1073,13 @@ void main() {
 						[uniform]: this.gl.getUniformLocation(
 							prgm,
 							`u${prop[uniform]}`
-						)
+						),
 					}),
 				{}
 			);
 
 		this.physicsUniforms = {
-			...getUniforms(
-				this.physicsProgram,
+			...getUniforms(this.physicsProgram,
 				{
 					resolution: "Resolution",
 					displayScale: "DisplayScale",
@@ -1216,17 +1091,15 @@ void main() {
 					propagationSpeed: "PropagationSpeed",
 					previousState: "PreviousState",
 					touchPositions: "Touch",
-					touchCount: "TouchCount"
-				}
-			),
+					touchCount: "TouchCount",
+				}),
 			touches: new Array(10)
 			.fill({})
 			.map((_, i) => {
 
 				const uTouch = `TouchParams[${i}].`;
 
-				return getUniforms(
-					this.physicsProgram,
+				return getUniforms(this.physicsProgram,
 					{
 						position: `${uTouch}position`,
 						radius: `${uTouch}radius`,
@@ -1234,15 +1107,13 @@ void main() {
 						strength: `${uTouch}strength`,
 						trail: `${uTouch}trail`,
 						spread: `${uTouch}spread`,
-						angle: `${uTouch}angle`
-					}
-				);
+						angle: `${uTouch}angle`,
+					});
 			
-			})
+			}),
 		};
 
-		this.renderUniforms = getUniforms(
-			this.renderProgram,
+		this.renderUniforms = getUniforms(this.renderProgram,
 			{
 				resolution: "Resolution",
 				time: "Time",
@@ -1252,11 +1123,9 @@ void main() {
 				backgroundTexture: "BackgroundTexture",
 
 				sunDirection: "SunDirection",
-				lightDirection: "LightDirection",
+				secondarySunDirection: "SecondarySunDirection",
 				sunIntensity: "SunIntensity",
-				lightIntensity: "LightIntensity",
-				sunColor: "SunColor",
-				lightColor: "LightColor",
+				secondaryIntensity: "SecondaryIntensity",
 
 				refraction: "Refraction",
 				waterTint: "WaterTint",
@@ -1285,9 +1154,80 @@ void main() {
 
 				waveReflectionStrength: "WaveReflectionStrength",
 				mirrorReflectionStrength: "MirrorReflectionStrength",
-				velocityReflectionFactor: "VelocityReflectionFactor"
+				velocityReflectionFactor: "VelocityReflectionFactor",
+			});
+	
+	}
+
+	getUniformLocations(gl, program, defs) {
+
+		const uniforms = {};
+
+		for(const [type, locations] of Object.entries(defs)) {
+
+			if(type === "touchParams" || type === "arrays")
+				continue;
+
+			uniforms[type] = {};
+			for(const [name, loc] of Object.entries(locations)) {
+
+				uniforms[type][name] = gl.getUniformLocation(program,
+					loc);
+			
 			}
-		);
+		
+		}
+
+		if(defs.arrays) {
+
+			uniforms.arrays = {};
+			for(const [name, def] of Object.entries(defs.arrays)) {
+
+				uniforms.arrays[name] = {
+					location: gl.getUniformLocation(program,
+						def.name),
+					size: def.size,
+					type: def.type,
+				};
+			
+			}
+		
+		}
+
+		if(defs.touchParams) {
+
+			uniforms.touchParams = [];
+
+			for(let i = 0; i < defs.touchParams.count; i++) {
+
+				const touchUniforms = {};
+
+				for(const [type, params] of Object.entries(
+					defs.touchParams.struct
+				)) {
+
+					touchUniforms[type] = {};
+
+					for(const param of params) {
+
+						const loc = gl.getUniformLocation(
+							program,
+							`uTouchParams[${i}].${param}`
+						);
+
+						touchUniforms[type][param] = loc;
+					
+					}
+				
+				}
+
+				uniforms.touchParams.push(touchUniforms);
+			
+			}
+		
+		}
+
+		return uniforms;
 	
 	}
 
@@ -1300,16 +1240,12 @@ void main() {
 
 			const shader = gl.createShader(type);
 
-			gl.shaderSource(
-				shader,
-				source
-			);
+			gl.shaderSource(shader,
+				source);
 			gl.compileShader(shader);
 
-			if(!gl.getShaderParameter(
-				shader,
-				gl.COMPILE_STATUS
-			)) {
+			if(!gl.getShaderParameter(shader,
+				gl.COMPILE_STATUS)) {
 
 				const shaderInfo = gl.getShaderInfoLog(shader);
 
@@ -1326,29 +1262,19 @@ void main() {
 
 		try {
 
-			vertShader = createShader(
-				gl.VERTEX_SHADER,
-				vertexSource
-			);
-			fragShader = createShader(
-				gl.FRAGMENT_SHADER,
-				fragmentSource
-			);
+			vertShader = createShader(gl.VERTEX_SHADER,
+				vertexSource);
+			fragShader = createShader(gl.FRAGMENT_SHADER,
+				fragmentSource);
 
-			gl.attachShader(
-				program,
-				vertShader
-			);
-			gl.attachShader(
-				program,
-				fragShader
-			);
+			gl.attachShader(program,
+				vertShader);
+			gl.attachShader(program,
+				fragShader);
 			gl.linkProgram(program);
 
-			if(!gl.getProgramParameter(
-				program,
-				gl.LINK_STATUS
-			)) {
+			if(!gl.getProgramParameter(program,
+				gl.LINK_STATUS)) {
 
 				const programInfo = gl.getProgramInfoLog(program);
 
@@ -1381,93 +1307,61 @@ void main() {
 		const u = this.physicsUniforms;
 
 		gl.useProgram(this.physicsProgram);
-		gl.bindFramebuffer(
-			gl.FRAMEBUFFER,
-			this.currentFramebuffer
-		);
+		gl.bindFramebuffer(gl.FRAMEBUFFER,
+			this.currentFramebuffer);
 
-		gl.bindBuffer(
-			gl.ARRAY_BUFFER,
-			this.vertexBuffer
-		);
+		gl.bindBuffer(gl.ARRAY_BUFFER,
+			this.vertexBuffer);
 		const positionLoc = gl.getAttribLocation(
 			this.physicsProgram,
 			"position"
 		);
 
 		gl.enableVertexAttribArray(positionLoc);
-		gl.vertexAttribPointer(
-			positionLoc,
+		gl.vertexAttribPointer(positionLoc,
 			2,
 			gl.FLOAT,
 			false,
 			0,
-			0
-		);
+			0);
 
-		gl.uniform2f(
-			u.resolution,
+		gl.uniform2f(u.resolution,
 			this.w,
-			this.h
-		);
-		gl.uniform1f(
-			u.displayScale,
-			this.DISP_SCALE
-		);
-		gl.uniform1f(
-			u.sizeBase,
-			this.sizeBase
-		);
-		gl.uniform1f(
-			u.deltaTime,
-			this.deltaTime
-		);
-		gl.uniform1f(
-			u.time,
-			this.accumulatedTime
-		);
-		gl.uniform1f(
-			u.waveSpeed,
-			this.params.waveSpeed
-		);
-		gl.uniform1f(
-			u.damping,
-			this.params.damping
-		);
-		gl.uniform1f(
-			u.propagationSpeed,
-			// based on display scale factor
-			this.scaledPropagation
-			// this.params.propagationSpeed
-		);
+			this.h);
+		gl.uniform1f(u.displayScale,
+			this.displayScale);
+		gl.uniform1f(u.sizeBase,
+			this.sizeBase);
+		gl.uniform1f(u.deltaTime,
+			this.deltaTime);
+		gl.uniform1f(u.time,
+			this.accumulatedTime);
+		gl.uniform1f(u.waveSpeed,
+			this.params.waveSpeed);
+		gl.uniform1f(u.damping,
+			this.params.damping);
+		gl.uniform1f(u.propagationSpeed,
+			this.scaledPropagation);
 
 		this.processTouches();
 
 		gl.activeTexture(gl.TEXTURE0);
-		gl.bindTexture(
-			gl.TEXTURE_2D,
-			this.previousTexture
-		);
-		gl.uniform1i(
-			u.previousState,
-			0
-		);
+		gl.bindTexture(gl.TEXTURE_2D,
+			this.previousTexture);
+		gl.uniform1i(u.previousState,
+			0);
 
-		gl.drawArrays(
-			gl.TRIANGLE_STRIP,
+		gl.drawArrays(gl.TRIANGLE_STRIP,
 			0,
-			4
-		);
+			4);
 	
 	}
 
 	processTouches() {
 
 		const touchArray = Array.from(this.pops.values());
-		const touchCount = Math.min(
-			touchArray.length,
-			10
-		);
+		const touchCount = Math.min(touchArray.length,
+			10);
 
 		this.touchPositions.fill(0);
 		const gl = this.gl;
@@ -1483,46 +1377,28 @@ void main() {
 			this.touchPositions[(i + touchCount) * 2] = touch.prevX;
 			this.touchPositions[(i + touchCount) * 2 + 1] = touch.prevY;
 
-			gl.uniform2f(
-				u.touches[i].position,
+			gl.uniform2f(u.touches[i].position,
 				touch.x,
-				touch.y
-			);
-			gl.uniform1f(
-				u.touches[i].radius,
-				touch.touchRadius
-			);
-			gl.uniform1f(
-				u.touches[i].damping,
-				touch.touchDamping
-			);
-			gl.uniform1f(
-				u.touches[i].strength,
-				touch.initialImpact
-			);
-			gl.uniform1f(
-				u.touches[i].trail,
-				touch.trailStrength
-			);
-			gl.uniform1f(
-				u.touches[i].spread,
-				touch.trailSpread
-			);
-			gl.uniform1f(
-				u.touches[i].angle,
-				touch.trailAngle
-			);
+				touch.y);
+			gl.uniform1f(u.touches[i].radius,
+				touch.touchRadius);
+			gl.uniform1f(u.touches[i].damping,
+				touch.touchDamping);
+			gl.uniform1f(u.touches[i].strength,
+				touch.initialImpact);
+			gl.uniform1f(u.touches[i].trail,
+				touch.trailStrength);
+			gl.uniform1f(u.touches[i].spread,
+				touch.trailSpread);
+			gl.uniform1f(u.touches[i].angle,
+				touch.trailAngle);
 		
 		}
 
-		gl.uniform2fv(
-			u.touchPositions,
-			this.touchPositions
-		);
-		gl.uniform1i(
-			u.touchCount,
-			touchCount
-		);
+		gl.uniform2fv(u.touchPositions,
+			this.touchPositions);
+		gl.uniform1i(u.touchCount,
+			touchCount);
 	
 	}
 
@@ -1531,79 +1407,53 @@ void main() {
 		const gl = this.gl;
 
 		gl.useProgram(this.renderProgram);
-		gl.bindFramebuffer(
-			gl.FRAMEBUFFER,
-			null
-		);
+		gl.bindFramebuffer(gl.FRAMEBUFFER,
+			null);
 
-		gl.clearColor(
+		gl.clearColor(0,
 			0,
 			0,
-			0,
-			1
-		);
+			1);
 		gl.clear(gl.COLOR_BUFFER_BIT);
 
-		gl.bindBuffer(
-			gl.ARRAY_BUFFER,
-			this.vertexBuffer
-		);
+		gl.bindBuffer(gl.ARRAY_BUFFER,
+			this.vertexBuffer);
 		const positionLoc = gl.getAttribLocation(
 			this.renderProgram,
 			"position"
 		);
 
 		gl.enableVertexAttribArray(positionLoc);
-		gl.vertexAttribPointer(
-			positionLoc,
+		gl.vertexAttribPointer(positionLoc,
 			2,
 			gl.FLOAT,
 			false,
 			0,
-			0
-		);
+			0);
 
 		this.updateRenderUniforms();
 
 		gl.activeTexture(gl.TEXTURE0);
-		gl.bindTexture(
-			gl.TEXTURE_2D,
-			this.currentTexture
-		);
-		gl.uniform1i(
-			this.renderUniforms.waterHeight,
-			0
-		);
+		gl.bindTexture(gl.TEXTURE_2D,
+			this.currentTexture);
+		gl.uniform1i(this.renderUniforms.waterHeight,
+			0);
 
 		gl.activeTexture(gl.TEXTURE1);
-		gl.bindTexture(
-			gl.TEXTURE_2D,
-			this.backgroundTexture
-		);
-		gl.uniform1i(
-			this.renderUniforms.backgroundTexture,
-			1
-		);
+		gl.bindTexture(gl.TEXTURE_2D,
+			this.backgroundTexture);
+		gl.uniform1i(this.renderUniforms.backgroundTexture,
+			1);
 
 		gl.activeTexture(gl.TEXTURE2);
-		gl.bindTexture(
-			gl.TEXTURE_2D,
-			this.previousTexture
-		);
-		gl.uniform1i(
-			this.renderUniforms.previousState,
-			2
-		);
+		gl.bindTexture(gl.TEXTURE_2D,
+			this.previousTexture);
+		gl.uniform1i(this.renderUniforms.previousState,
+			2);
 
-		gl.drawArrays(
-			gl.TRIANGLE_STRIP,
+		gl.drawArrays(gl.TRIANGLE_STRIP,
 			0,
-			4
-		);
-
-		/*
-		
-		// error checking
+			4);
 
 		const renderError = gl.getError();
 
@@ -1619,7 +1469,7 @@ void main() {
 
 			throw new Error("incomplete framebuffer " + fbStatus);
 		
-		}*/
+		}
 	
 	}
 
@@ -1629,37 +1479,27 @@ void main() {
 		const u = this.renderUniforms;
 		const p = this.params;
 
-		gl.uniform2f(
-			u.resolution,
+		gl.uniform2f(u.resolution,
 			this.w,
-			this.h
-		);
-		gl.uniform1f(
-			u.time,
-			this.accumulatedTime
-		);
-		gl.uniform1f(
-			u.displayScale,
-			this.DISP_SCALE
-		);
+			this.h);
+		gl.uniform1f(u.time,
+			this.accumulatedTime);
+		gl.uniform1f(u.displayScale,
+			this.displayScale);
 
 		Object.keys(p)
 		.filter(prop =>
-			u[prop] && p[prop] instanceof Array)
+			u[prop] && p[prop] instanceof Float32Array)
 		.forEach(prop =>
-			gl.uniform3fv(
-				u[prop],
-				p[prop]
-			));
+			gl.uniform3fv(u[prop],
+				p[prop]));
 
 		Object.keys(p)
 		.filter(prop =>
 			u[prop] && typeof p[prop] === "number")
 		.forEach(prop =>
-			gl.uniform1f(
-				u[prop],
-				p[prop]
-			));
+			gl.uniform1f(u[prop],
+				p[prop]));
 	
 	}
 
@@ -1670,21 +1510,17 @@ void main() {
 
 		const gl = this.gl;
 		let cvs = document.createElement("canvas");
-		const ctx = cvs.getContext(
-			"2d",
-			{ alpha: false }
-		);
+		const ctx = cvs.getContext("2d",
+			{ alpha: false });
 
 		cvs.width = this.w;
 		cvs.height = this.h;
 
 		ctx.fillStyle = "#000000";
-		ctx.fillRect(
-			0,
+		ctx.fillRect(0,
 			0,
 			this.w,
-			this.h
-		);
+			this.h);
 
 		const imgW = this.image.naturalWidth;
 		const imgH = this.image.naturalHeight;
@@ -1710,8 +1546,7 @@ void main() {
 		
 		}
 
-		ctx.drawImage(
-			this.image,
+		ctx.drawImage(this.image,
 			sx,
 			sy,
 			sw,
@@ -1719,8 +1554,7 @@ void main() {
 			0,
 			0,
 			this.w,
-			this.h
-		);
+			this.h);
 
 		this.fish.forEach(fish => {
 
@@ -1731,22 +1565,18 @@ void main() {
 				ctx.globalAlpha = 0.55;
 				ctx.shadowColor = "#000000";
 				ctx.shadowBlur = 16;
-				ctx.drawImage(
-					fish.i,
+				ctx.drawImage(fish.i,
 					x,
 					y,
 					w,
-					h
-				);
+					h);
 			
 			}
 		
 		});
 
-		gl.bindTexture(
-			gl.TEXTURE_2D,
-			this.backgroundTexture
-		);
+		gl.bindTexture(gl.TEXTURE_2D,
+			this.backgroundTexture);
 		gl.texImage2D(
 			gl.TEXTURE_2D,
 			0,
@@ -1756,12 +1586,10 @@ void main() {
 			cvs
 		);
 
-		ctx.clearRect(
-			0,
+		ctx.clearRect(0,
 			0,
 			this.w,
-			this.h
-		);
+			this.h);
 		cvs.width = cvs.height = 0;
 		cvs = null;
 	
@@ -1808,10 +1636,8 @@ void main() {
 
 		this.renderInfo("--");
 
-		this.amplify.toggle(
-			"flow",
-			false
-		);
+		this.amplify.toggle("flow",
+			false);
 	
 	}
 
@@ -1824,8 +1650,6 @@ void main() {
 
 	renderLoop(currentTime) {
 
-		/*
-		// will throw error anyway ?
 		if(!this.gl || this.gl.isContextLost()) {
 
 			this.stopRenderLoop();
@@ -1833,7 +1657,6 @@ void main() {
 			throw new Error("webgl context lost");
 		
 		}
-			*/
 
 		this.accumulatedTime += this.deltaTime;
 
@@ -1849,12 +1672,14 @@ void main() {
 	
 	}
 
-	startPerfCheck(chk = this.SCALE_CHECK_INTERVAL) {
+	startPerfCheck(chk = 1000) {
 
 		if(this.PERF_CHECK)
 			return;
 
-		// if(DEBUG) console.log("perf run");
+		if(DEBUG)
+			console.log("start perf check",
+				chk);
 
 		this.PERF_CHECK = true;
 
@@ -1868,11 +1693,10 @@ void main() {
 		if(!this.PERF_CHECK)
 			return;
 
-		// if(DEBUG) console.log("stop perf check");
+		if(DEBUG)
+			console.log("stop perf check");
 
 		this.PERF_CHECK = false;
-
-		this.LOOP_COUNT = 0;
 
 		this.currentFPS = 0;
 	
@@ -1900,10 +1724,8 @@ void main() {
 		if(updatedFPS !== this.currentFPS) {
 
 			this.renderInfo(updatedFPS.toString()
-			.padStart(
-				2,
-				"0"
-			));
+			.padStart(2,
+				"0"));
 		
 		}
 
@@ -1914,10 +1736,7 @@ void main() {
 			this.lastScaleCheck = currentTime;
 
 			this.LOOP_COUNT++;
-
 			if(this.LOOP_COUNT >= this.LOOPS_TO_SCALE) {
-
-				this.LOOP_COUNT = 0;
 
 				if(this.currentFPS < this.TARGET_FPS) {
 
@@ -1926,8 +1745,8 @@ void main() {
 				}
 				else if(
 					this.ENABLE_UPSCALE
-					&& this.DISP_SCALE < this.DOWN_FROM
-					&& this.DISP_SCALE < this.MAX_SCALE
+					&& this.displayScale < this.DOWN_FROM
+					&& this.displayScale < this.MAX_SCALE
 				) {
 
 					this.upScale();
@@ -1942,56 +1761,45 @@ void main() {
 
 	downScale() {
 
-		if(this.DISP_SCALE == this.MIN_SCALE)
-			return;
-
 		if(DEBUG)
 			console.log("downscale");
 
-		this.DOWN_FROM = this.DISP_SCALE - this.SCALE_STEP;
-		this.setDisplayScale(this.DISP_SCALE - this.SCALE_STEP);
+		this.DOWN_FROM = this.displayScale - this.SCALE_STEP;
+		this.setDisplayScale(this.displayScale - this.SCALE_STEP);
 	
 	}
 
 	upScale() {
 
-		if(this.DISP_SCALE == this.MAX_SCALE)
-			return;
-
 		if(DEBUG)
 			console.log("upscale");
 
-		this.setDisplayScale(this.DISP_SCALE + this.SCALE_STEP);
+		this.setDisplayScale(this.displayScale + this.SCALE_STEP);
 	
 	}
 
 	setDisplayScale(ds) {
 
-		ds = Math.max(
-			Math.min(
-				this.MAX_SCALE,
-				ds
-			),
-			this.MIN_SCALE
-		);
+		ds = Math.max(Math.min(this.MAX_SCALE,
+			ds),
+		this.MIN_SCALE);
 
-		if(ds == this.DISP_SCALE)
+		if(ds == this.displayScale)
 			return;
 
 		if(DEBUG)
-			console.log(
-				"set scale",
-				ds
-			);
+			console.log("set scale",
+				ds);
 
 		this.stopPerfCheck();
 
-		this.renderText((ds > this.DISP_SCALE ? "up" : "down") + "scale");
+		this.renderText((ds > this.displayScale ? "up" : "down") + "scale");
 
 		this.LOOP_COUNT = 0;
-		
-		// this.DISP_SCALE = Math.round(ds * 2) / 2; // clean round ?
-		this.DISP_SCALE = ds;
+
+		// clean round
+		this.displayScale = Math.round(ds * 2) / 2;
+		this.scaleBase = this.displayScale / this.baseScale;
 
 		this.syncLiquid();
 
@@ -2001,18 +1809,15 @@ void main() {
 
 	renderText(str) {
 
-		// disp on next frame
 		window.requestAnimationFrame(() => {
-
-			this.infos.textContent = str;
-		
+			this.infos.textContent = str
 		});
 	
 	}
 
 	renderInfo(fps) {
 
-		this.infos.textContent = "x" + this.DISP_SCALE.toString() + " " + fps;
+		this.infos.textContent = "x" + this.displayScale.toString() + " " + fps;
 	
 	}
 
@@ -2023,50 +1828,10 @@ void main() {
 		if(DEBUG)
 			console.log(this.isVisible ? "visible" : "hidden");
 
-		this.activeChange();
-	
-	}
-
-	handleBlur() {
-
-		this.focusChange(false);
-	
-	}
-
-	handleFocus() {
-
-		this.focusChange(true);
-	
-	}
-
-	focusChange(focused) {
-
-		if(DEBUG)
-			console.log(focused ? "focus" : "blur");
-
-		this.isFocused = focused;
-
-		this.activeChange();
-	
-	}
-
-	activeChange() {
-
-		if(this.isActive)
+		if(this.isVisible)
 			this.startRenderLoop();
 		else
 			this.stopRenderLoop();
-	
-	}
-
-	handleHash() {
-
-		if(DEBUG)
-			console.log("hash changed");
-
-		// alert("hash");
-
-		// window.location.reload();
 	
 	}
 
@@ -2081,7 +1846,7 @@ void main() {
 				: this.waterTexture1,
 			this.previousTexture === this.waterTexture1
 				? this.waterTexture2
-				: this.waterTexture1
+				: this.waterTexture1,
 		];
 	
 	}
@@ -2106,10 +1871,8 @@ void main() {
 
 		[this.waterTexture1, this.waterTexture2].forEach(texture => {
 
-			gl.bindTexture(
-				gl.TEXTURE_2D,
-				texture
-			);
+			gl.bindTexture(gl.TEXTURE_2D,
+				texture);
 			gl.texImage2D(
 				gl.TEXTURE_2D,
 				0,
@@ -2135,37 +1898,34 @@ void main() {
 		if(DEBUG)
 			console.log("setup events");
 
-		document.addEventListener(
-			"visibilitychange",
+		document.addEventListener("visibilitychange",
 			() =>
 				this.visibleChange()
 		);
-		
-		Object.entries({
-			"blur": this.handleBlur,
-			"focus": this.handleFocus,
-			"resize": this.handleResize,
-			"hashchange": this.handleHash
-		})
-		.forEach(([evtName, evtCall]) =>
-			window.addEventListener(
-				evtName,
-				evtCall.bind(this)
-			));
+		window.addEventListener("resize",
+			() =>
+				this.debouncedResize());
 
-		Object.entries({
-			"touchstart": this.doNotTouch,
+		window.addEventListener("hashchange",
+			() =>
+				window.location.reload());
+
+		const pointerEvents = {
+			"touchstart": this.dontTouchMe,
 			"pointerdown": this.handlePointerStart,
 			"pointermove": this.handlePointerMove,
 			"pointerup": this.handlePointerEnd,
 			"pointerout": this.handlePointerEnd,
-			"pointercancel": this.handlePointerEnd
-		})
-		.forEach(([evtName, evtCall]) =>
+			"pointercancel": this.handlePointerEnd,
+		};
+
+		Object.keys(pointerEvents)
+		.forEach(pointing =>
 			this.cvs.addEventListener(
-				evtName,
-				evtCall.bind(this)
-			));
+				pointing,
+				pointerEvents[pointing].bind(this)
+			)
+		);
 	
 	}
 
@@ -2185,19 +1945,19 @@ void main() {
 			cy = evt.clientY;
 
 		return {
-			x: cx * this.DISP_SCALE,
-			y: this.h - cy * this.DISP_SCALE,
+			x: cx * this.displayScale,
+			y: this.h - cy * this.displayScale,
 			rx: cx,
-			ry: cy
+			ry: cy,
 		};
 
-		// round ?
+		// ROUND ?
 		/*const cx = Math.round(evt.clientX), 
 			cy = Math.round(evt.clientY);
 
 		return {
-			x: Math.round(cx * this.DISP_SCALE), 
-			y: Math.round(this.h - cy * this.DISP_SCALE),
+			x: Math.round(cx * this.displayScale), 
+			y: Math.round(this.h - cy * this.displayScale),
 			rx: cx,
 			ry: cy
 		};*/
@@ -2213,12 +1973,12 @@ void main() {
 			initialImpact: this.params.initialImpact,
 			trailStrength: this.params.trailStrength,
 			trailSpread: this.params.trailSpread,
-			trailAngle: this.params.trailAngle
+			trailAngle: this.params.trailAngle,
 		};
 	
 	}
 
-	doNotTouch(evt) {
+	dontTouchMe(evt) {
 
 		// kill iOS magnifier
 		evt.preventDefault();
@@ -2227,7 +1987,7 @@ void main() {
 
 	handlePointerStart(evt) {
 
-		// evt.preventDefault();
+		evt.preventDefault();
 
 		const pId = evt.pointerId;
 
@@ -2238,22 +1998,20 @@ void main() {
 
 		const pos = this.getPointerPos(evt);
 
-		this.pops.set(
-			pId,
+		this.pops.set(pId,
 			{
 				x: pos.x,
 				y: pos.y,
 				prevX: pos.x,
 				prevY: pos.y,
-				...this.pointOptions()
-			}
-		);
+				...this.pointOptions(),
+			});
 	
 	}
 
 	handlePointerMove(evt) {
 
-		// evt.preventDefault();
+		evt.preventDefault();
 
 		const pId = evt.pointerId;
 
@@ -2296,11 +2054,10 @@ void main() {
 
 			const hit = Array.from(this.pops.values())
 			.some(pop =>
-				this.hitPoint(
-					pop.rx,
+				this.hitPoint(pop.rx,
 					pop.ry,
-					this.amplify.bnd
-				));
+					this.amplify.bnd)
+			);
 
 			if(hit !== this.hits) {
 
@@ -2368,12 +2125,6 @@ void main() {
 	
 	}
 
-	get isActive() {
-
-		return this.isVisible && this.isFocused;
-	
-	}
-
 	// UTIL
 
 	randRange(min, max) {
@@ -2385,21 +2136,16 @@ void main() {
 	// EFFECTS
 
 	/**
-	 * @method dropIt : 
+	 * @method dropIt :
 	 * @param {number=} x :
 	 * @param {number=} y :
-	 * @param {number=} o :
 	 */
-	dropIt(x, y, o = 75) {
+	dropIt(x, y) {
 
-		x ||= this.randRange(
-			this.w * 0.3,
-			this.w * 0.7
-		);
-		y ||= this.randRange(
-			this.h * 0.3,
-			this.h * 0.7
-		);
+		x ||= this.randRange(this.w * 0.3,
+			this.w * 0.7);
+		y ||= this.randRange(this.h * 0.3,
+			this.h * 0.7);
 
 		const dropId = "drop_" + this.genPopId();
 
@@ -2408,28 +2154,26 @@ void main() {
 			y,
 			prevX: x,
 			prevY: y,
-			...this.pointOptions()
-			// touchRadius: 0.015,
-			// touchDamping: 990,
-			// initialImpact: 0.15,
-			// trailStrength: 0.001,
-			// trailSpread: 0,
-			// trailAngle: this.params.trailAngle
+			...this.pointOptions(),
+			touchRadius: 0.015,
+			touchDamping: 990,
+			initialImpact: 0.15,
+			trailStrength: 0.001,
+			trailSpread: 0,
+			trailAngle: this.params.trailAngle,
+			// initialImpact: 0.1,
+			// trailStrength: 0
 		};
 
-		this.pops.set(
-			dropId,
-			point
-		);
+		this.pops.set(dropId,
+			point);
 
-		setTimeout(
-			() => {
+		setTimeout(() => {
 
-				this.pops.delete(dropId);
+			this.pops.delete(dropId);
 		
-			},
-			o + Math.round(Math.random() * 100)
-		);
+		},
+		75 + Math.round(Math.random() * 100));
 	
 	}
 
@@ -2455,16 +2199,14 @@ void main() {
 			y: startY,
 			prevX: startX,
 			prevY: startY,
-			...this.pointOptions()
+			...this.pointOptions(),
 			// touchRadius: 0.015,
 			// trailStrength: 0.08,
 			// trailSpread: 0.05
 		};
 
-		this.pops.set(
-			touchId,
-			point
-		);
+		this.pops.set(touchId,
+			point);
 		const startTime = performance.now();
 		const duration = 1234;
 
@@ -2491,57 +2233,6 @@ void main() {
 			point.y
 				= invT * invT * startY + 2 * invT * t * ctrlY + t * t * endY;
 
-			window.requestAnimationFrame(animate);
-		
-		};
-
-		animate();
-	
-	}
-
-	circleIt() {
-
-		const centerX = this.w * 0.5;
-		const centerY = this.h * 0.5;
-		const radius = Math.min(
-			this.w,
-			this.h
-		) * 0.05;
-		const speed = 0.005; // rad / ms
-
-		const touchId = "circle_" + this.genPopId();
-		const startAngle = Math.random() * this.TWO_PI;
-
-		const point = {
-			x: centerX + Math.cos(startAngle) * radius,
-			y: centerY + Math.sin(startAngle) * radius,
-			prevX: centerX + Math.cos(startAngle) * radius,
-			prevY: centerY + Math.sin(startAngle) * radius,
-			...this.pointOptions(),
-			touchRadius: 0.02
-			// trailStrength: 0.15,
-			// trailSpread: 0.1
-		};
-
-		this.pops.set(
-			touchId,
-			point
-		);
-		const startTime = performance.now();
-
-		const animate = () => {
-
-			if(!this.pops.has(touchId))
-				return;
-
-			const elapsed = performance.now() - startTime;
-			const angle = startAngle + elapsed * speed;
-
-			point.prevX = point.x;
-			point.prevY = point.y;
-			point.x = centerX + Math.cos(angle) * radius;
-			point.y = centerY + Math.sin(angle) * radius;
-
 			requestAnimationFrame(animate);
 		
 		};
@@ -2567,24 +2258,23 @@ void main() {
 			...this.pointOptions(),
 			touchRadius: 0.02,
 			trailStrength: 0.12,
-			trailSpread: 0.15
+			trailSpread: 0.15,
 		};
 
-		this.pops.set(
-			touchId,
-			point
-		);
+		this.pops.set(touchId,
+			point);
 
-		const duration = 2500;
+		let time = 0;
+		const duration = 2500; // 2.5 seconds
 		const startTime = performance.now();
 
-		// curve width & height
-		const radiusX = this.w * 0.15; 
-		const radiusY = this.h * 0.15;
-		const loops = 1.5 + Math.random(); // how many loops
+		// Random curve parameters
+		const radiusX = this.w * 0.15; // Curve width
+		const radiusY = this.h * 0.15; // Curve height
+		const loops = 1.5 + Math.random(); // How many loops to make
 		const drift = {
-			x: (Math.random() - 0.5) * 0.3, 
-			y: (Math.random() - 0.5) * 0.3
+			x: (Math.random() - 0.5) * 0.3, // Gradual x drift
+			y: (Math.random() - 0.5) * 0.3, // Gradual y drift
 		};
 
 		const animate = () => {
@@ -2602,6 +2292,7 @@ void main() {
 			point.prevX = point.x;
 			point.prevY = point.y;
 
+			// Smooth curve motion with slight drift
 			const angle = progress * Math.PI * 2 * loops;
 
 			point.x = startX + Math.cos(angle) * radiusX + drift.x * elapsed;
@@ -2631,13 +2322,11 @@ void main() {
 			prevX: initialX,
 			prevY: initialY,
 			...this.pointOptions(),
-			...params
+			...params,
 		};
 
-		this.pops.set(
-			popId,
-			popped
-		);
+		this.pops.set(popId,
+			popped);
 
 		const updateSwirl = () => {
 
@@ -2647,12 +2336,10 @@ void main() {
 			if(progress < 1) {
 
 				const angle = startAngle + elapsed * 0.001 * popped.speed;
-				const easedProgress = ease(
-					elapsed,
+				const easedProgress = ease(elapsed,
 					0,
 					1,
-					dur
-				);
+					dur);
 				const currentRadius = radius * (1 - easedProgress);
 
 				if(this.pops.has(popId)) {
@@ -2694,10 +2381,8 @@ void main() {
 			this.createSwirl(
 				this.w / 2,
 				this.h / 2,
-				Math.min(
-					this.w,
-					this.h
-				) * radius,
+				Math.min(this.w,
+					this.h) * radius,
 				{
 					// touchRadius: 0.02,
 					// touchDamping: 0.995,
@@ -2705,10 +2390,10 @@ void main() {
 					// trailStrength: 1.2,
 					// trailSpread: 1.6,
 					// trailAngle: 500,
-					speed: 2.5
+					speed: 2.5,
 				},
 				3333,
-				2 * Math.PI / numSwirls * i,
+				((2 * Math.PI) / numSwirls) * i,
 				this.sineIn
 			);
 		
@@ -2780,64 +2465,54 @@ void main() {
 			prevX: x,
 			prevY: y,
 			...this.pointOptions(),
-			touchRadius: 0.02,
+			touchRadius: 0.01,
 			touchDamping: 0.35,
-			initialImpact: 0.12
+			initialImpact: 0.1,
 			// trailStrength: 0.1,
 		};
 
-		this.pops.set(
-			dropId + "_impact",
-			impactPoint
-		);
+		this.pops.set(dropId + "_impact",
+			impactPoint);
 
 		// then splash
-		setTimeout(
-			() => {
+		setTimeout(() => {
 
-				const splashPoint = {
-					x,
-					y,
-					prevX: x,
-					prevY: y,
-					...this.pointOptions(),
-					touchRadius: 0.06,
-					touchDamping: 0.35,
-					initialImpact: 0.12
-					// trailStrength: 0.1,
-					// trailSpread: 2.0
-				};
+			const splashPoint = {
+				x,
+				y,
+				prevX: x,
+				prevY: y,
+				...this.pointOptions(),
+				touchRadius: 0.04,
+				touchDamping: 0.35,
+				initialImpact: 0.1,
+				// trailStrength: 0.1,
+				// trailSpread: 2.0
+			};
 
-				this.pops.set(
-					dropId + "_splash",
-					splashPoint
-				);
+			this.pops.set(dropId + "_splash",
+				splashPoint);
 		
-			},
-			64
-		);
+		},
+		64);
 
 		this.activeRaindrops.add(dropId);
-		setTimeout(
-			() => {
+		setTimeout(() => {
 
-				this.pops.delete(dropId + "_impact");
-				this.pops.delete(dropId + "_splash");
-				this.activeRaindrops.delete(dropId);
+			this.pops.delete(dropId + "_impact");
+			this.pops.delete(dropId + "_splash");
+			this.activeRaindrops.delete(dropId);
 		
-			},
-			72
-		);
+		},
+		72);
 	
 	}
 
 	stopRain() {
 
 		this.isRaining = false;
-		this.amplify.toggle(
-			"rain",
-			false
-		);
+		this.amplify.toggle("rain",
+			false);
 	
 	}
 
@@ -2845,7 +2520,7 @@ void main() {
 
 	toggleAutoTouch() {
 
-		if(this.isAuto)
+		if(this.isAutoTouching)
 			this.stopAutoTouch();
 		else
 			this.startAutoTouch();
@@ -2854,10 +2529,10 @@ void main() {
 
 	startAutoTouch() {
 
-		if(this.isAuto)
+		if(this.isAutoTouching)
 			return;
 
-		this.isAuto = true;
+		this.isAutoTouching = true;
 		const touchId = "auto";
 		let time = 0;
 
@@ -2868,17 +2543,15 @@ void main() {
 			prevY: this.h / 2,
 			speed: 0.01,
 			scale: 0.5,
-			...this.pointOptions()
+			...this.pointOptions(),
 		};
 
-		this.pops.set(
-			touchId,
-			point
-		);
+		this.pops.set(touchId,
+			point);
 
 		const animate = () => {
 
-			if(!this.isAuto) {
+			if(!this.isAutoTouching) {
 
 				this.pops.delete(touchId);
 				return;
@@ -2903,15 +2576,13 @@ void main() {
 
 	stopAutoTouch() {
 
-		if(!this.isAuto)
+		if(!this.isAutoTouching)
 			return;
 		if(DEBUG)
 			console.log("stop auto touch");
-		this.isAuto = false;
-		this.amplify.toggle(
-			"point",
-			this.isAuto
-		);
+		this.isAutoTouching = false;
+		this.amplify.toggle("point",
+			this.isAutoTouching);
 	
 	}
 

@@ -6,7 +6,7 @@
 	--bcck: rgba(255, 255, 255, 0.75);
 	--blck: rgba(255, 255, 255, 0.85);
 	--col: rgba(0, 0, 0, 1);
-	--hil: rgba(0, 128, 255, 1);
+	--hil: rgb(0, 128, 255);
 	--rad: 4px;
 	--pad: 4px;
 	--spc: 6px;
@@ -30,10 +30,6 @@ html {
 	height: 100%;
 
 	touch-action: none;
-}
-
-html, body {
-	overscroll-behavior-x: none;
 }
 
 body {
@@ -116,24 +112,18 @@ canvas {
 .gear {
 	pointer-events: all;
 	position: fixed;
-	left: 100%;
-	top: 0;
-	padding-top: var(--spc);
-	padding-left: var(--spc);
-	/* left: calc(100% + var(--spc)); */
-	/* top: var(--spc); */
-	width: calc(var(--spc) + var(--icn));
-	height: calc(var(--spc) + var(--icn));
+	left: calc(100% + var(--spc));
+	top: var(--spc);
+	width: var(--icn);
+	height: var(--icn);
 	z-index: 10;
 	cursor: pointer;
 	background-color: var(--bcck);
 	-webkit-mask-image: url("../assets/gear.png");
 	mask-image: url("../assets/gear.png");
-	mask-origin: content-box;
 	mask-repeat: no-repeat;
 	mask-size: contain;
-	/* box-shadow: 1px 1px 2px var(--col); */
-	transition: padding-left var(--anim) var(--ease);
+	box-shadow: 1px 1px 2px var(--col);
 }
 
 .gear.up {
@@ -164,7 +154,6 @@ canvas {
 	z-index: 20;
 	left: 0px;
 	top: 0px;
-	width: 256px;
 	height: 100%;
 	pointer-events: none;
 	padding: var(--pad);
@@ -180,21 +169,17 @@ canvas {
 	transform: translateX(0px);
 }
 
-.params.pop .gear {
-	padding-left: 0px;
-}
-
 .pwrp {
 	pointer-events: all;
 	max-height: 100%;
-	/* opacity: 0; */
+	opacity: 0;
 	display: flex;
 	flex-direction: column;
 	overflow: scroll;
 	gap: var(--pad);
 	color: var(--col);
 	font-size: 1.15em;
-	/* transition: opacity var(--anim) var(--ease); */
+	transition: all var(--anim) var(--ease);
 }
 
 .pwrp.nobar {
@@ -360,21 +345,20 @@ canvas {
 /* PROPS */
 
 .prop {
-	position: relative;
 	display: flex;
 	gap: var(--spc);
 	align-items: center;
 	justify-content: space-between;
 	padding: 0.22em 0.33em;
-	/* WTF MOBILE CHROME POINTER CAPTURE */
-	touch-action: none;
 }
 
 .prop .valt,
 .prop .val {
-	z-index: 10;
-	/* transition: all var(--anim) var(--ease); */
-	pointer-events: none;
+	transition: all var(--anim) var(--ease);
+}
+
+.prop .val {
+	transition: all var(--anim) var(--ease);
 }
 
 .prop.down .valt {
@@ -382,18 +366,6 @@ canvas {
 }
 
 .prop.down .val {
-	/* transform: scale(1.2, 1.2); */
-}
-
-.vbar {
-	position: absolute;
-	bottom: 2px;
-	left: 0px;
-	/* height: 82%; */
-	/* background: var(--back); */
-	pointer-events: none;
-	height: 2px;
-	background: #3498db;
 }
 
 /* GITHUB LOGO */
