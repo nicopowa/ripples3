@@ -1,14 +1,8 @@
 class Params {
 
-	/**
-	 * 
-	 * @param {Liquid} liquid 
-	 */
 	constructor(liquid) {
 
 		this.liquid = liquid;
-
-		this.pos = "tl"; // tl tr bl br
 
 		this.pop = false;
 
@@ -17,10 +11,8 @@ class Params {
 		this.preidx = 0;
 
 		this.bnd = {
-			x: 0,
-			y: 0,
-			w: 0,
-			h: 0
+			x: 0, y: 0,
+			w: 0, h: 0
 		};
 
 		this.params = {
@@ -32,6 +24,7 @@ class Params {
 				max: 0.999,
 				stp: 0.001,
 				grp: "global"
+				// exp: "Controls how quickly waves propagate. Higher values = faster waves"
 			},
 			damping: {
 				nnm: "damping",
@@ -41,6 +34,7 @@ class Params {
 				max: 0.999,
 				stp: 0.001,
 				grp: "global"
+				// exp: "How quickly waves lose energy. Higher values = waves persist longer"
 			},
 			propagationSpeed: {
 				nnm: "propagation",
@@ -51,6 +45,7 @@ class Params {
 				stp: 2,
 				rst: true, // heavy glitch if not reseting water state
 				grp: "global"
+				// exp: "Distance waves travel per frame. Higher = faster spread"
 			},
 
 			refraction: {
@@ -61,6 +56,7 @@ class Params {
 				max: 5.0,
 				stp: 0.01,
 				grp: "visual"
+				// exp: "Light bending through water. Higher values = more distortion"
 			},
 			waterHue: {
 				nnm: "water hue",
@@ -70,8 +66,12 @@ class Params {
 				max: 1.0,
 				stp: 0.01,
 				grp: "visual",
-				mod: () =>
-					this.updateColors()
+				// exp: "Base color of water (0-1 maps to color wheel)",
+				mod: val => {
+
+					this.liquid.params.waterTint = this.hueToRGB(val);
+
+				}
 			},
 			tintStrength: {
 				nnm: "tint",
@@ -81,6 +81,7 @@ class Params {
 				max: 1.0,
 				stp: 0.005,
 				grp: "visual"
+				// exp: "Intensity of water coloration"
 			},
 			specularStrength: {
 				nnm: "specular",
@@ -90,6 +91,7 @@ class Params {
 				max: 5.0,
 				stp: 0.01,
 				grp: "visual"
+				// exp: "Intensity of light reflections on water surface"
 			},
 			roughness: {
 				nnm: "roughness",
@@ -99,6 +101,7 @@ class Params {
 				max: 1.0,
 				stp: 0.01,
 				grp: "visual"
+				// exp: "Surface texture. Higher = more diffuse reflections"
 			},
 
 			fresnelEffect: {
@@ -109,6 +112,7 @@ class Params {
 				max: 3.0,
 				stp: 0.05,
 				grp: "fresnel"
+				// exp: "Edge brightness. Higher = stronger edge highlights"
 			},
 			fresnelPower: {
 				nnm: "power",
@@ -118,6 +122,7 @@ class Params {
 				max: 5.0,
 				stp: 0.01,
 				grp: "fresnel"
+				// exp: "Sharpness of edge effect. Higher = more concentrated"
 			},
 			reflectionFresnel: {
 				nnm: "reflection",
@@ -127,6 +132,7 @@ class Params {
 				max: 5.0,
 				stp: 0.05,
 				grp: "fresnel"
+				// exp: "Strength of angle-based reflections"
 			},
 			reflectionBlur: {
 				nnm: "blur",
@@ -136,6 +142,7 @@ class Params {
 				max: 5.0,
 				stp: 0.01,
 				grp: "fresnel"
+				// exp: "Softness of reflections"
 			},
 			reflectionDistortion: {
 				nnm: "distortion",
@@ -145,6 +152,7 @@ class Params {
 				max: 30.0,
 				stp: 0.1,
 				grp: "fresnel"
+				// exp: "Wave-based reflection warping"
 			},
 			skyHue: {
 				nnm: "sky hue",
@@ -154,8 +162,12 @@ class Params {
 				max: 1.0,
 				stp: 0.01,
 				grp: "world",
-				mod: () =>
-					this.updateColors()
+				// exp: "Color of environmental reflection (0-1 maps to color wheel)",
+				mod: () => {
+					
+					this.liquid.params.skyColor = this.hueToRGB(this.params.skyHue.val);
+
+				}
 			},
 			depthFactor: {
 				nnm: "depth",
@@ -165,6 +177,7 @@ class Params {
 				max: 15.0,
 				stp: 0.1,
 				grp: "world"
+				// exp: "Simulated water depth effect"
 			},
 			atmosphericScatter: {
 				nnm: "scatter",
@@ -174,6 +187,7 @@ class Params {
 				max: 1.0,
 				stp: 0.01,
 				grp: "world"
+				// exp: "Atmospheric light scattering in water"
 			},
 			envMapIntensity: {
 				nnm: "environment",
@@ -183,6 +197,7 @@ class Params {
 				max: 5.0,
 				stp: 0.01,
 				grp: "world"
+				// exp: "Strength of environmental reflections"
 			},
 
 			touchRadius: {
@@ -193,6 +208,7 @@ class Params {
 				max: 0.1,
 				stp: 0.001,
 				grp: "touch"
+				// exp: "Size of interaction area"
 			},
 			initialImpact: {
 				nnm: "impact",
@@ -202,6 +218,7 @@ class Params {
 				max: 2.0,
 				stp: 0.01,
 				grp: "touch"
+				// exp: "Initial strength of touch disturbance"
 			},
 			trailStrength: {
 				nnm: "trail",
@@ -211,6 +228,7 @@ class Params {
 				max: 5.0,
 				stp: 0.05,
 				grp: "touch"
+				// exp: "Strength of continuous touch effect"
 			},
 			trailSpread: {
 				nnm: "spread",
@@ -220,6 +238,7 @@ class Params {
 				max: 5.0,
 				stp: 0.05,
 				grp: "touch"
+				// exp: "How widely touch effect spreads"
 			},
 
 			causticStrength: {
@@ -230,6 +249,7 @@ class Params {
 				max: 1.0,
 				stp: 0.01,
 				grp: "caustic"
+				// exp: "Intensity of underwater light patterns"
 			},
 			causticScale: {
 				nnm: "scale",
@@ -239,6 +259,7 @@ class Params {
 				max: 3.0,
 				stp: 0.05,
 				grp: "caustic"
+				// exp: "Size of caustic patterns"
 			},
 			causticSpeed: {
 				nnm: "speed",
@@ -248,6 +269,7 @@ class Params {
 				max: 1.0,
 				stp: 0.005,
 				grp: "caustic"
+				// exp: "Animation speed of caustics"
 			},
 			causticBrightness: {
 				nnm: "brightness",
@@ -257,6 +279,7 @@ class Params {
 				max: 2.0,
 				stp: 0.01,
 				grp: "caustic"
+				// exp: "Overall brightness of caustic effects"
 			},
 			causticDetail: {
 				nnm: "detail",
@@ -266,6 +289,7 @@ class Params {
 				max: 5.0,
 				stp: 0.05,
 				grp: "caustic"
+				// exp: "Complexity of caustic patterns"
 			},
 
 			sunIntensity: {
@@ -276,8 +300,9 @@ class Params {
 				max: 10.0,
 				stp: 0.1,
 				grp: "sunlight"
+				// exp: "Primary light source intensity"
 			},
-			sunHue: {
+			/*sunHue: {
 				nnm: "sun hue",
 				dmp: "snh",
 				val: 0,
@@ -285,9 +310,13 @@ class Params {
 				max: 1.0,
 				stp: 0.01,
 				grp: "sunlight",
-				mod: () =>
-					this.updateSunLight()
-			},
+				// exp: "Sun color (0-1 maps to color wheel)",
+				mod: () => {
+					
+					this.liquid.params.sunColor = this.hueToRGB(this.params.sunHue.val);
+
+				}
+			},*/
 			sunAngle: {
 				nnm: "sun angle",
 				dmp: "sth",
@@ -296,6 +325,7 @@ class Params {
 				max: 360,
 				stp: 5,
 				grp: "sunlight",
+				// exp: "Horizontal angle of sun in degrees (0=East, 90=North, 180=West, 270=South)",
 				mod: () =>
 					this.updateSunLight()
 			},
@@ -307,6 +337,7 @@ class Params {
 				max: 90,
 				stp: 1,
 				grp: "sunlight",
+				// exp: "Height of sun above horizon in degrees (0=horizon, 90=overhead)",
 				mod: () =>
 					this.updateSunLight()
 			},
@@ -318,8 +349,9 @@ class Params {
 				max: 10.0,
 				stp: 0.1,
 				grp: "sunlight"
+				// exp: "Secondary light source intensity"
 			},
-			lightHue: {
+			/*lightHue: {
 				nnm: "light hue",
 				dmp: "lih",
 				val: 0,
@@ -327,9 +359,13 @@ class Params {
 				max: 1.0,
 				stp: 0.01,
 				grp: "sunlight",
-				mod: () =>
-					this.updateSunLight()
-			},
+				// exp: "Light color (0-1 maps to color wheel)",
+				mod: () => {
+					
+					this.liquid.params.lightColor = this.hueToRGB(this.params.lightHue.val);
+
+				}
+			},*/
 			lightAngle: {
 				nnm: "light angle",
 				dmp: "lth",
@@ -338,6 +374,7 @@ class Params {
 				max: 360,
 				stp: 5,
 				grp: "sunlight",
+				// exp: "Horizontal angle of secondary light in degrees",
 				mod: () =>
 					this.updateSunLight()
 			},
@@ -349,6 +386,7 @@ class Params {
 				max: 90,
 				stp: 1,
 				grp: "sunlight",
+				// exp: "Height of secondary light above horizon in degrees",
 				mod: () =>
 					this.updateSunLight()
 			},
@@ -358,9 +396,10 @@ class Params {
 				dmp: "rfs",
 				val: 0,
 				min: 0.0,
-				max: 3.0,
-				stp: 0.001,
+				max: 5.0,
+				stp: 0.01,
 				grp: "reflect"
+				// exp: "Strength of wave-based reflections"
 			},
 			mirrorReflectionStrength: {
 				nnm: "mirror",
@@ -370,6 +409,7 @@ class Params {
 				max: 10.0,
 				stp: 0.01,
 				grp: "reflect"
+				// exp: "Strength of mirror-like reflections"
 			},
 			velocityReflectionFactor: {
 				nnm: "velocity",
@@ -379,31 +419,29 @@ class Params {
 				max: 10.0,
 				stp: 0.05,
 				grp: "reflect"
+				// exp: "How much wave motion affects reflections"
 			}
 		};
 
 		// this.smoother = new ParamAnimator(this);
 
 		this.wrap = this.divIt(
-			this.liquid.wrap,
+			document.body,
 			["params", ...(this.expanded ? ["exp"] : [])]
-		);
+		)
 
 		this.gear = this.divIt(
 			this.wrap,
 			"gear"
 		);
-
 		this.pwrp = this.divIt(
 			this.wrap,
 			"pwrp"
 		);
-
 		this.switch = this.divIt(
 			this.pwrp,
 			"switch"
 		);
-		
 		this.preset = this.divIt(
 			this.pwrp,
 			"preset"
@@ -453,14 +491,14 @@ class Params {
 				nnm: "flow",
 				wht: "swp",
 				cbk: () =>
-					this.liquid.toggleRender(),
+					this.liquid.toggleRenderLoop(),
 				stt: true
 			},
 			reset: {
 				nnm: "reset",
 				wht: "cmd",
 				cbk: () =>
-					this.liquid.resetWater()
+					this.liquid.resetWaterState()
 			},
 
 			// LINE 2
@@ -496,10 +534,9 @@ class Params {
 			},
 
 			what: {
-				nnm: "test",
-				wht: "swp",
-				cbk: () =>
-					this.liquid.toggleTest()
+				nnm: "    ",
+				wht: "cmd",
+				cbk: () => {}
 			},
 
 			well: {
@@ -543,8 +580,6 @@ class Params {
 			},*/
 		};
 
-		this.placeParams();
-
 		// moving pointers => prop name
 		this.proppers = new Map();
 		// pointer => prop start val
@@ -567,8 +602,6 @@ class Params {
 		
 		});
 
-		const defaultPreset = presets["default"];
-
 		Object.keys(this.params)
 		.forEach(flowing => {
 
@@ -576,8 +609,7 @@ class Params {
 
 			// sync init value with liquid instance
 			liquifying.key = flowing;
-			// liquifying.val = this.liquid.params[flowing];
-			liquifying.val = defaultPreset[flowing];
+			liquifying.val = this.liquid.params[flowing];
 
 			this.addProp(liquifying);
 		
@@ -598,12 +630,10 @@ class Params {
 
 	liquified() {
 
-		this.syncParams(this.liquid.params);
+		// this.syncParams(this.liquid.params);
 
 		this.updateSunLight();
 		this.updateColors();
-
-		this.liquid.uniformize();
 	
 	}
 
@@ -627,54 +657,15 @@ class Params {
 
 	liquidCode() {
 
-		window.location = "https://nicopr.fr/ripples3";
+		window.location = "https://post.nicopr.fr/liquid-code/";
 	
-	}
-
-	placeParams() {
-
-		// Reset position styles
-		// this.wrap.style.top = this.wrap.style.bottom = this.wrap.style.left = this.wrap.style.right = "";
-			
-		// Position menu panel
-		if(this.pos.includes("t"))
-			this.wrap.style.top = "0";
-		else
-			this.wrap.style.bottom = "0";
-			
-		if(this.pos.includes("l"))
-			this.wrap.style.left = "0";
-		else
-			this.wrap.style.right = "0";
-			
-		// Position gear
-		// this.gear.style.top = this.gear.style.bottom = this.gear.style.left = this.gear.style.right = "";
-			
-		if(this.pos.includes("t"))
-			this.gear.style.top = "0";
-		else
-			this.gear.style.bottom = "var(--spc)";
-			
-		if(this.pos.includes("l"))
-			this.gear.style.left = "100%";
-		else
-			this.gear.style.right = "0";
-			
-		// Set transform direction for panel
-		const transform = this.pos.includes("l") ? "translateX(-100%)" : "translateX(100%)";
-
-		this.wrap.style.transform = transform;
-
 	}
 
 	toggleParams() {
 
-		/*this.wrap.classList.toggle("pop");
+		this.wrap.classList.toggle("pop");
 
-		this.pop = this.wrap.classList.contains("pop");*/
-		this.pop = !this.pop;
-		this.wrap.style.transform = this.pop ? "translateX(0)"
-			: (this.pos.includes("l") ? "translateX(-100%)" : "translateX(100%)");
+		this.pop = this.wrap.classList.contains("pop");
 	
 	}
 
@@ -709,7 +700,6 @@ class Params {
 
 		// just load
 		this.liquid.load(params);
-		
 		this.syncParams(params);
 	
 	}
@@ -731,6 +721,9 @@ class Params {
 			this.updateProgressBar(entry);
 		
 		});
+
+		this.updateSunLight();
+		this.updateColors();
 	
 	}
 
@@ -745,7 +738,7 @@ class Params {
 				document
 				.exitFullscreen();
 			else
-				this.liquid.cvs
+				document.body
 				.requestFullscreen();
 
 		}
@@ -804,7 +797,6 @@ class Params {
 				return param.dmp + "=" + JSON.stringify(val);
 			
 			}
-
 			return param.dmp + "=" + JSON.stringify(val);
 		
 		});
@@ -829,11 +821,9 @@ class Params {
 			})
 			.catch(err => {
 
-				// console.error(err);
+				console.error(err);
 
-				throw err;
-
-				// this.copyParams(shareUrl);
+				this.copyParams(shareUrl);
 
 			});
 
@@ -878,19 +868,15 @@ class Params {
 
 			const params = {};
 
-			const dmpToParam = Object.fromEntries(
-				Object.entries(this.params)
-				.map(([key, param]) =>
-					[param.dmp, key])
-			);
+			// uh ? no brain
+			const dmpToParam = Object.fromEntries(Object.entries(this.params)
+			.map(([key, param]) =>
+				[param.dmp, key]));
 
 			hash.split("&")
 			.map(keyVal =>
 				keyVal.split("="))
 			.forEach(([dmp, val]) => {
-
-				if(dmp === "img")
-					params.img = val;
 
 				const paramKey = dmpToParam[dmp];
 
@@ -910,16 +896,13 @@ class Params {
 					param.hnt.innerText = value.toFixed(places);
 				
 				}
-
 				if(param.bar) {
 
 					this.updateProgressBar(param);
 				
 				}
 
-				params[paramKey] = value;
-
-				/*if(param.mod) {
+				if(param.mod) {
 
 					param.mod(value);
 				
@@ -928,7 +911,7 @@ class Params {
 
 					params[paramKey] = value;
 				
-				}*/
+				}
 			
 			});
 
@@ -941,7 +924,6 @@ class Params {
 
 			this.liquid.renderText("bad url");
 			console.error(err);
-
 			return {};
 		
 		}
@@ -950,8 +932,8 @@ class Params {
 
 	browseBack() {
 
-		if(DEBUG)
-			console.log("browse");
+		if(DEBUG) 
+			console.log("browse custom img");
 
 		const fileInput = document.createElement("input");
 
@@ -963,7 +945,7 @@ class Params {
 			"change",
 			evt => {
 
-				if(DEBUG)
+				if(DEBUG) 
 					console.log("load custom img");
 
 				const newBack = URL.createObjectURL(evt.target.files[0]);
@@ -976,11 +958,9 @@ class Params {
 				.then(
 					() => {
 
-						if(DEBUG)
-							console.log("revoke blob");
+						if(DEBUG) console.log("revoke blob");
 
 						URL.revokeObjectURL(newBack);
-					
 					}
 				);
 			
@@ -992,7 +972,7 @@ class Params {
 			() => {
 			
 				if(DEBUG)
-					console.log("cancel browse");
+					console.log("browse canceled");
 
 				fileInput.remove();
 			
@@ -1070,6 +1050,8 @@ class Params {
 	}
 
 	addGroup(nnm) {
+
+		// if(DEBUG) console.log("add group", nnm);
 
 		let propGroup = this.divIt(
 			this.pwrp,
@@ -1253,7 +1235,6 @@ class Params {
 				newValue
 			)
 		);
-
 		newValue = this.roundToStep(
 			newValue,
 			prop.stp
@@ -1264,13 +1245,9 @@ class Params {
 	
 		prop.val = newValue;
 	
-		/*const decimals = String(prop.stp)
+		const decimals = String(prop.stp)
 		.match(/\.(\d+)$/);
-
-		const places = decimals ? decimals[1].length : 0;*/
-
-		const places = String(prop.stp)
-		.split(".")[1]?.length || 0;
+		const places = decimals ? decimals[1].length : 0;
 
 		prop.hnt.innerHTML = prop.val.toFixed(places);
 	
@@ -1278,10 +1255,9 @@ class Params {
 	
 		if(prop.rst) {
 
-			if(DEBUG)
-				console.log("prop reset");
+			if(DEBUG) console.log("prop reset")
 
-			this.liquid.resetWater();
+			this.liquid.resetWaterState();
 
 			this.liquid.syncUniforms();
 		
@@ -1297,8 +1273,6 @@ class Params {
 			this.liquid.params[prop.key] = prop.val;
 		
 		}
-
-		this.liquid.uniformize();
 	
 	}
 
@@ -1352,7 +1326,6 @@ class Params {
 	hueToRGB(hue) {
 
 		hue = hue % 1;
-
 		if(hue < 0)
 			hue += 1;
 
@@ -1365,7 +1338,7 @@ class Params {
 
 		let r, g, b;
 
-		switch(i % 6) {
+		switch (i % 6) {
 
 			case 0: r = 1; g = t; b = p; break;
 			case 1: r = q; g = 1; b = p; break;
@@ -1408,7 +1381,7 @@ class Params {
 	}
 
 	updateSunLight() {
-
+		
 		this.liquid.params.sunDirection = this.sphericalToCartesian(
 			this.params.sunAngle.val,
 			this.params.sunHeight.val
@@ -1418,15 +1391,12 @@ class Params {
 			this.params.lightAngle.val,
 			this.params.lightHeight.val
 		);
-
-		this.liquid.params.sunColor = this.hueToRGB(this.params.sunHue.val);
-		this.liquid.params.lightColor = this.hueToRGB(this.params.lightHue.val);
 	
 	}
 
 	updateColors() {
 
-		this.liquid.params.waterColor = this.hueToRGB(this.params.waterHue.val);
+		this.liquid.params.waterTint = this.hueToRGB(this.params.waterHue.val);
 		this.liquid.params.skyColor = this.hueToRGB(this.params.skyHue.val);
 	
 	}
@@ -1602,7 +1572,6 @@ class ParamAnimator {
 					});
 
 					anim.control.val = newValues;
-
 					if(anim.control.mod) {
 
 						anim.control.mod(newValues);
@@ -1625,7 +1594,6 @@ class ParamAnimator {
 					);
 					
 					anim.control.val = value;
-
 					if(anim.control.hnt) {
 
 						const places = String(anim.step)
@@ -1634,7 +1602,6 @@ class ParamAnimator {
 						anim.control.hnt.innerText = value.toFixed(places);
 					
 					}
-
 					if(anim.control.bar) {
 
 						const pc = ((value - anim.control.min)
@@ -1666,7 +1633,6 @@ class ParamAnimator {
 
 				this.isAnimating = false;
 				this.animations.clear();
-
 				return;
 			
 			}

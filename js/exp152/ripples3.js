@@ -1,7 +1,7 @@
 /**
  * Ripples3
  * Nico Pr
- * https://nicopr.fr/ripples3
+ * https://nicopr.fr
  * https://github.com/nicopowa/ripples3
  */
 
@@ -27,14 +27,13 @@ window.addEventListener(
 	"load",
 	() => {
 
-		console.log(atob("aHR0cHM6Ly9uaWNvcHIuZnIvcmlwcGxlczM"));
+		console.log("https://github.com/nicopowa/ripples3");
 
 		window.addEventListener(
 			"error",
 			evt => {
 
 				handleError(evt.error);
-
 				return false;
 	
 			}
@@ -45,7 +44,6 @@ window.addEventListener(
 			evt => {
 
 				handleError(evt.reason);
-
 				return false;
 	
 			}
@@ -53,9 +51,7 @@ window.addEventListener(
 
 		try {
 
-			const rippler = document.querySelector("#ripples3");
-
-			const liquify = new Liquid(rippler);
+			const liquify = new Liquid();
 			const amplify = new Params(liquify);
 
 			liquify
@@ -70,6 +66,7 @@ window.addEventListener(
 
 				lazy(
 					() => {
+
 						// liquify.snailIt();
 						// liquify.circleIt();
 						// if(!liquify.isTouched) liquify.dropIt();
@@ -79,6 +76,17 @@ window.addEventListener(
 							}, 
 							1000
 						);*/
+
+						/*setInterval(
+							() => 
+								liquify.dropIt(
+									liquify.w / 2, 
+									liquify.h / 2, 
+									111
+								),
+							2222
+						);*/
+					
 					},
 					500
 				);
@@ -88,7 +96,7 @@ window.addEventListener(
 				handleError(err));
 	
 		}
-		catch(err) {
+		catch (err) {
 
 			handleError(err);
 	
@@ -97,180 +105,216 @@ window.addEventListener(
 	}
 );
 
+/**
+ * @class Liquid : liquify all the pixels
+ */
 class Liquid {
 
 	/**
-	 * @param {Element} wrap 
+	 * @construct
 	 */
-	constructor(wrap = document.body) {
+	constructor() {
 
-		this.BASE_SCALE = 2.0;
-		this.REF_SIZE = 1024;
-		this.MAX_SCALE = 2.0;
-		this.MIN_SCALE = 1.0;
-		this.STEP = 1000 / 60;
-		this.DISP_SCALE = this.MAX_SCALE;
-		this.PAUSE_HIDE = true;
-		this.PAUSE_BLUR = false;
-		this.TARGET_FPS = 50;
-		this.FRAME_SIZE = 32;
-		this.SCALE_TIME = 1000;
-		this.SCALE_STEP = 0.5;
-		this.ENABLE_UPSCALE = true;
-		this.LOOPS_TO_SCALE = 3;
+		this.BASE_SCALE = 2.0; // ref scale
+		this.REF_SIZE = 1024;   // ref size
+		this.MAX_SCALE = 2.0;  // Max display scale 
+		// this.MAX_SCALE = Math.min(window.devicePixelRatio || 1, 2); // default device scale
+		this.MIN_SCALE = 1.0;  // Min display scale
+		this.STEP = 1000 / 60; // 60 FPS fixed timestep
 
-		this.MAX_TOUCHES = 10;
+		// this.DISP_SCALE = this.MIN_SCALE; // start low and go up
+		this.DISP_SCALE = this.MAX_SCALE; // start high and go down
+
+		this.TARGET_FPS = 55; // downscale if less
+		this.SCALE_CHECK_INTERVAL = 1000; // perf check interval
+		this.SCALE_STEP = 0.5; // scale step
+		this.ENABLE_UPSCALE = true; // enable auto upscale
+		this.LOOPS_TO_SCALE = 3; // loops before scale (up or down)
+
+		// DO NOT EDIT BELOW
 
 		this.PERF_CHECK = false;
-		this.LOOP_COUNT = 0;
-		this.DOWN_FROM = this.MAX_SCALE;
-		this.ww = 0;
-		this.wh = 0;
+		this.LOOP_COUNT = 0; // check loops count
+		this.DOWN_FROM = this.MAX_SCALE; // prevent upscale loop
+
+		this.STEP_INV = 1 / this.STEP;
+
+		this.FIXED_TIMESTEP = 1000.0 / 60.0; // frame time 16.667
+		this.DELTA_TIMESTEP = this.FIXED_TIMESTEP / 1000;
+
+		this.ww // innerWidth
+			= this.wh = 0; // innerHeight
+
 		this.sizeBase = 0;
-		this.wrap = wrap;
 
 		this.syncSize();
 
-		this.params = presets["default"];
+		this.params = {
+			img: "assets/img.webp",
+			waveSpeed: 0.997,
+			damping: 0.996,
+			propagationSpeed: 10,
+			refraction: 0.8,
+			waterHue: 0.619,
+			waterTint: [0, 0.286, 1],
+			tintStrength: 0.1,
+			specularStrength: 0.7,
+			roughness: 0.16,
+			fresnelEffect: 1.2,
+			fresnelPower: 2.6,
+			specularPower: 39,
+			reflectionFresnel: 1,
+			reflectionBlur: 0.2,
+			reflectionDistortion: 0.5,
+			skyHue: 0.583,
+			skyColor: [0, 0.502, 1],
+			depthFactor: 2,
+			atmosphericScatter: 0.2,
+			envMapIntensity: 0.7,
+			touchRadius: 0.027,
+			initialImpact: 0.36,
+			trailStrength: 0.25,
+			trailSpread: 0.3,
+			causticStrength: 0.15,
+			causticScale: 1.4,
+			causticSpeed: 0.02,
+			causticBrightness: 0.42,
+			causticDetail: 2.5,
+			sunDirection: [0.624, 0.332, 0.707],
+			sunAngle: 28,
+			sunHeight: 63,
+			lightDirection: [0.659, -0.534, 0.53],
+			lightAngle: 175,
+			lightHeight: 60,
+			sunIntensity: 6,
+			sunHue: 0.52,
+			lightIntensity: 1.2,
+			lightHue: 0.52,
+			waveReflectionStrength: 0.6,
+			mirrorReflectionStrength: 0.3,
+			velocityReflectionFactor: 0.15
+		};
+
+		this.img = this.params.img;
 
 		this.amplify
-		= this.hitting
-		= this.sizing
-		= this.img
-		= this.image
-		= this.cvs
-		= this.gl
-		= this.vertexBuffer
-		= this.physicsProgram
-		= this.physics
-		= this.renderProgram
-		= this.renders
-		= this.currentTexture
-		= this.previousTexture
-		= this.backgroundTexture
-		= this.waterTexture1
-		= this.waterTexture2
-		= this.currentFramebuffer
-		= this.framebuffer1
-		= this.framebuffer2
-		= null;
+			= this.hitting
+			= this.sizing
+			= this.image
+			= this.cvs
+			= this.gl
+			= this.vertexBuffer
+			= this.physicsProgram
+			= this.physicsUniforms
+			= this.renderProgram
+			= this.renderUniforms
+			= this.currentTexture
+			= this.previousTexture
+			= this.backgroundTexture
+			= this.waterTexture1
+			= this.waterTexture2
+			= this.currentFramebuffer
+			= this.framebuffer1
+			= this.framebuffer2
+				= null;
 
 		this.loop = -1;
 		this.hits = false;
 
 		this.vertices = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+		this.touchPositions = new Float32Array(20); // 10 touches
 
-		// touches x,y,px,py
-		this.touchPositions = new Float32Array(this.MAX_TOUCHES * 4);
+		this.TWO_PI = Math.PI * 2;
 
 		this.scaledPropagation = this.params.propagationSpeed;
 
 		this.currentFPS = 0;
-		this.frameTimeHistory = [];
-		this.frameTimeSum = 0;
+		this.frameTimeHistory = new Array(30)
+		.fill(16.67);
 		this.frameTimeIndex = 0;
 		this.lastFrameTime = 0;
 		this.lastScaleCheck = 0;
-		this.notBefore = 0;
+		this.notBefore = 0; // perf check delay
 
-		this.isLiquid = false;
-		this.isRunning = false;
-		this.isVisible = true;
-		this.isFocused = true;
-		this.isTouched = false;
-		this.isAuto = false;
-		this.isTest = false;
-		this.testLoop = null;
+		this.isLiquid = false; // init state
+		this.isRunning = false; // render loop state
+		this.isVisible = true; // visibility state
+		this.isFocused = true; // focus state
+		this.isTouched = false; // first touch
+		this.isAuto = false; // auto touch
+
 		this.isRaining = false;
 		this.lastRainDrop = 0;
-		this.rainDropDelay = 384;
+		this.rainDropDelay = 256;
 		this.maxRaindrops = 4;
 		this.activeRaindrops = null;
 
-		this.pops = new Map();
+		this.pops = new Map(); // pointers
 		this.deltaTime = 1;
 		this.accumulatedTime = 0;
-		this.fish = [];
+		this.fish = []; // underwater imgs
+
 		this.infos = null;
-
-		this.dirtyPhysics = true;
-		this.dirtyRenders = true;
-
-		this.bck = document.createElement("canvas");
-		this.btx = this.bck.getContext(
-			"2d",
-			{
-				alpha: false
-			}
-		);
 
 		this.cvs = document.createElement("canvas");
 		this.cvs.style.opacity = "0";
-		wrap.appendChild(this.cvs);
+		document.body.appendChild(this.cvs);
 	
 	}
 
 	async load(preset) {
 
 		if(DEBUG)
-			console.log(
-				"load preset",
-				preset
-			);
-				
+			console.log("load params");
+
+		const changeBackground = preset.img && preset.img != this.img;
+	
+		this.stopPerfCheck();
 		this.renderText("loading");
 
-		await this.fadeCanvas(0);
+		if(changeBackground) {
 
-		// this.stopPerfCheck();
-		this.stopRender();
-		this.resetWater();
-
-		if(preset.img && preset.img != this.img) {
-
-			if(DEBUG)
-				console.log("change background");
-			
+			await this.fadeCanvas(0);
 			this.img = preset.img;
-			await this.loadBackground();
+			this.image = await this.loadImage(this.img);
 			this.updateBackgroundTexture();
-		
+
 		}
 
+		this.resetWaterState();
+	
 		this.params = {
-			...presets["default"],
 			...this.params,
 			...preset
 		};
-
+	
 		this.syncUniforms();
 
-		this.amplify.updateSunLight();
-		this.amplify.updateColors();
+		// stoopid double check
+		if(changeBackground) {
 
-		this.startRender();
+			await this.fadeCanvas(1);
 		
-		await this.fadeCanvas(1);
+		}
+
+		this.startPerfCheck();
 	
 	}
 
 	flow(amplify = null, params = {}) {
 
 		this.amplify = amplify;
-
 		this.params = {
 			...this.params,
 			...params
 		};
-
-		this.img = this.params.img;
 
 		this.infos = document.querySelector("#fps");
 
 		if(DEBUG)
 			console.log("flow");
 
-		return [
+		const initSequence = [
 			this.loadBackground,
 			this.loadForeground,
 			this.initializeWebGL,
@@ -283,8 +327,10 @@ class Liquid {
 			this.syncTextures,
 			this.syncUniforms,
 			this.setupEvents,
-			this.startRender
-		]
+			this.startRenderLoop
+		];
+
+		return initSequence
 		.map(fn =>
 			fn.bind(this))
 		.reduce(
@@ -298,10 +344,10 @@ class Liquid {
 			return this.fadeCanvas(1)
 			.then(() => {
 
-				if(DEBUG)
-					console.log("liquified");
+				console.log("liquified");
 
 				this.isLiquid = true;
+
 				this.amplify.liquified();
 			
 			});
@@ -318,14 +364,9 @@ class Liquid {
 	async loadBackground() {
 
 		if(DEBUG)
-			console.log(
-				"load background",
-				this.img
-			);
+			console.log("load background");
 
-		const imgUrl = (!this.img.startsWith("blob:") ? "assets/" : "") + this.img;
-
-		this.image = await this.loadImage(imgUrl);
+		this.image = await this.loadImage(this.img);
 	
 	}
 
@@ -337,6 +378,7 @@ class Liquid {
 		const imgSize = 36;
 		const imgOff = 6;
 
+		// underwater github logo 
 		this.fish.push({
 			i: await this.loadImage("assets/github-mark-white.png"),
 			c: () =>
@@ -369,7 +411,7 @@ class Liquid {
 			
 				}
 			);
-			i.crossOrigin = "anonymous";
+			i.crossOrigin = "Anonymous";
 			i.src = imgSrc;
 		
 		});
@@ -394,7 +436,6 @@ class Liquid {
 			"webgl2",
 			contextOptions
 		);
-
 		if(!this.gl)
 			throw new Error("webgl2 not supported");
 
@@ -457,57 +498,38 @@ uniform Touch uTouchParams[10];
 in vec2 texCoord;
 out vec4 fragColor;
 
+float sampleHeight(vec2 coord) {
+	return texture(uPreviousState, clamp(coord, 0.0, 1.0)).r;
+}
+
 float getTouchDistance(vec2 texCoord, vec2 touchPos) {
 	vec2 pixelCoord = texCoord * uResolution;
 	float whatSize = max(uResolution.x, uResolution.y) / uSizeBase;
-	vec2 delta = (pixelCoord - touchPos) / whatSize;
-	return length(delta);
-}
-
-float getTrailEffect(vec2 texCoord, vec2 currentPos, vec2 prevPos, float spread, float whatSize) {
-	vec2 moveVec = currentPos - prevPos;
-	float moveLen = length(moveVec);
-	
-	if(moveLen < 0.0001) return 0.0;
-	
-	moveLen /= whatSize;
-	vec2 moveDir = moveVec / moveLen;
-	vec2 toPoint = (texCoord * uResolution - prevPos);
-	float alongTrail = dot(toPoint, moveDir);
-	
-	if(alongTrail >= 0.0) return 0.0;
-	
-	vec2 perpToTrail = toPoint - (alongTrail * moveDir);
-	float perpDist = length(perpToTrail) / whatSize;
-	
-	float trailStrength = max(0.0, 1.0 - perpDist / spread);
-	return trailStrength * moveLen * 0.4;
+	return length(pixelCoord - touchPos) / whatSize;
 }
 
 void main() {
-	vec2 pixel = vec2(1.0) / uResolution;
 	vec4 state = texture(uPreviousState, texCoord);
 	float height = state.r;
 	float oldHeight = state.g;
 	
+	vec2 pixel = vec2(1.0) / uResolution;
+
 	float sum = 0.0;
-	
-	for(int i = 0; i < 12; i++) {
-		float angle = float(i) * 0.523598775;
+	for(int i = 0; i < 8; i++) {
+		float angle = float(i) * 0.785398163; // PI / 4
 		vec2 dir = vec2(cos(angle), sin(angle));
-		vec2 sampleCoord = texCoord + dir * pixel * uPropagationSpeed;
-		sampleCoord = clamp(sampleCoord, vec2(0.0), vec2(1.0));
+		vec2 sampleOffset = dir * pixel * uPropagationSpeed;
+		vec2 sampleCoord = texCoord + sampleOffset;
 		sum += texture(uPreviousState, sampleCoord).r;
 	}
-	
-	sum /= 12.0;
+	sum *= 0.125;
 	
 	float newHeight = sum * 2.0 - oldHeight;
 	newHeight = mix(height, newHeight, uWaveSpeed);
 	newHeight *= uDamping;
-	
+
 	float whatSize = max(uResolution.x, uResolution.y);
-	float totalEffect = 0.0;
 	
 	for(int i = 0; i < uTouchCount; i++) {
 		float dist = getTouchDistance(texCoord, uTouch[i]);
@@ -515,18 +537,31 @@ void main() {
 		
 		if(dist < scaledRadius) {
 			float strength = smoothstep(scaledRadius, 0.0, dist);
-			strength = pow(strength, 1.5);
-			float touchEffect = uTouchParams[i].strength * strength * 0.6;
+			float impact = uTouchParams[i].strength;
+			float touchEffect = impact * strength * 0.5;
 			
 			if(uTouchParams[i].trail > 0.0 && i > 0) {
-				touchEffect += uTouchParams[i].trail * getTrailEffect(texCoord, uTouch[i], uTouch[i-1], uTouchParams[i].spread, whatSize);
+				vec2 prevPos = uTouch[i - 1];
+				vec2 moveVec = uTouch[i] - prevPos;
+				float moveLen = length(moveVec) / whatSize;
+				
+				if(moveLen > 0.0001) {
+					vec2 moveDir = moveVec / length(moveVec);
+					vec2 toPoint = (texCoord * uResolution - prevPos);
+					float alongTrail = dot(toPoint, moveDir);
+					
+					if(alongTrail < 0.0) {
+						vec2 perpToTrail = toPoint - (alongTrail * moveDir);
+						float perpDist = length(perpToTrail) / whatSize;
+						float trailEffect = exp(-perpDist / (uTouchParams[i].spread + 0.001));
+						touchEffect += uTouchParams[i].trail * trailEffect * moveLen * 0.3;
+					}
+				}
 			}
 			
-			totalEffect += touchEffect;
+			newHeight += touchEffect;
 		}
 	}
-	
-	newHeight += totalEffect;
 	
 	fragColor = vec4(newHeight, height, 0.0, 1.0);
 }`;
@@ -545,9 +580,7 @@ uniform vec3 uSunDirection;
 uniform vec3 uLightDirection;
 uniform float uSunIntensity;
 uniform float uLightIntensity;
-uniform vec3 uSunColor;
-uniform vec3 uLightColor;
-uniform vec3 uWaterColor;
+uniform vec3 uWaterTint;
 uniform float uTintStrength;
 uniform float uSpecularStrength;
 uniform float uRoughness;
@@ -574,150 +607,159 @@ uniform float uRefraction;
 in vec2 texCoord;
 out vec4 fragColor;
 
-vec3 getNormal(vec2 uv, vec2 pixel, out float velocity) {
+vec3 getNormal(vec2 uv, vec2 pixel) {
 	vec4 data = texture(uWaterHeight, uv);
 	float height = data.r;
 	float oldHeight = data.g;
-	velocity = (height - oldHeight) * uDisplayScale;
+	float velocity = (height - oldHeight) * uDisplayScale;
 	
-	vec2 offset = pixel * 2.0;
-	float l = texture(uWaterHeight, uv - vec2(offset.x, 0.0)).r;
-	float r = texture(uWaterHeight, uv + vec2(offset.x, 0.0)).r;
-	float t = texture(uWaterHeight, uv - vec2(0.0, offset.y)).r;
-	float b = texture(uWaterHeight, uv + vec2(0.0, offset.y)).r;
+	float s = 2.0;
+	float l1 = texture(uWaterHeight, clamp(uv - vec2(pixel.x * s, 0.0), 0.0, 1.0)).r;
+	float r1 = texture(uWaterHeight, clamp(uv + vec2(pixel.x * s, 0.0), 0.0, 1.0)).r;
+	float t1 = texture(uWaterHeight, clamp(uv - vec2(0.0, pixel.y * s), 0.0, 1.0)).r;
+	float b1 = texture(uWaterHeight, clamp(uv + vec2(0.0, pixel.y * s), 0.0, 1.0)).r;
 	
-	vec2 grad = vec2(r - l, b - t) * 0.5;
+	float l2 = texture(uWaterHeight, clamp(uv - vec2(pixel.x, pixel.y), 0.0, 1.0)).r;
+	float r2 = texture(uWaterHeight, clamp(uv + vec2(pixel.x, pixel.y), 0.0, 1.0)).r;
+	float t2 = texture(uWaterHeight, clamp(uv + vec2(pixel.x, -pixel.y), 0.0, 1.0)).r;
+	float b2 = texture(uWaterHeight, clamp(uv + vec2(-pixel.x, pixel.y), 0.0, 1.0)).r;
+	
+	float dx = ((l1 - r1) * 2.0 + (l2 - r2)) / 3.0;
+	float dy = ((t1 - b1) * 2.0 + (t2 - b2)) / 3.0;
 	
 	float normalStrength = 1.0 + abs(velocity) * 2.0;
-	grad *= normalStrength * uDisplayScale;
-	
-	return normalize(vec3(grad, 1.0));
+	return normalize(vec3(
+		dx * normalStrength * uDisplayScale,
+		dy * normalStrength * uDisplayScale,
+		1.0
+	));
 }
 
-float getCaustics(vec2 uv, vec3 normal, float velocity) {
-	if(uCausticStrength <= 0.0) return 0.0;
+vec3 sampleBlurredReflection(vec2 uv, float radius, vec2 pixel) {
+	// gaussian melting cpu ?
+	int kernelSize = 5;
+	float sigma = 2.0;
+	float pi = 3.14159265359;
 	
-	float scaledTime = uTime * uCausticSpeed;
+	vec3 color = vec3(0.0);
+	float totalWeight = 0.0;
 	
-	float scale = uCausticScale;
-	vec2 causticsUV = uv * scale + normal.xy * uReflectionDistortion;
-	float timeOffset = scaledTime;
+	for (int i = -2; i <= 2; i++) {
+		for (int j = -2; j <= 2; j++) {
+			float dist = sqrt(float(i * i + j * j));
+			float weight = exp(-(dist * dist) / (2.0 * sigma * sigma)) / (2.0 * pi * sigma * sigma);
+			
+			vec2 sampleUv = clamp(uv + vec2(float(i), float(j)) * radius * pixel, 0.0, 1.0);
+			sampleUv.y = 1.0 - sampleUv.y;
+			
+			color += texture(uBackgroundTexture, sampleUv).rgb * weight;
+			totalWeight += weight;
+		}
+	}
 	
-	vec2 warp = vec2(
-		sin(causticsUV.y * 2.0 + timeOffset),
-		sin(causticsUV.x * 2.0 + timeOffset * 1.3)
-	) * 0.1;
-	
-	causticsUV += warp;
-	
-	float detail = uCausticDetail * 8.0;
-	float pattern = sin(causticsUV.x * detail + timeOffset) * 
-				   sin(causticsUV.y * detail + timeOffset * 1.3);
-	
-	return pattern * 0.5 + 0.5;
+	return color / totalWeight;
 }
 
 float getReflection(vec3 normal, vec3 lightDir, vec3 viewDir, float velocity) {
 	vec3 halfDir = normalize(lightDir + viewDir);
 	float NdotH = max(dot(normal, halfDir), 0.0);
-	float NdotL = max(dot(normal, lightDir), 0.0);
+	float pi = 3.14159265359;
 	
 	float alpha = uRoughness * uRoughness;
 	float alpha2 = alpha * alpha;
 	float NdotH2 = NdotH * NdotH;
 	
 	float denom = NdotH2 * (alpha2 - 1.0) + 1.0;
-	float D = alpha2 / (3.14159265359 * denom * denom);
+	float D = alpha2 / (pi * denom * denom);
 	
+	// separate mirror & wave reflections
 	float mirrorSpec = D * uMirrorReflectionStrength;
-	float waveSpec = pow(NdotH, uSpecularPower) * (1.0 + abs(velocity) * 10.0) * uWaveReflectionStrength;
+	float waveSpec = pow(NdotH, uSpecularPower) * (1.0 + abs(velocity) * 8.0) * uWaveReflectionStrength;
 	
-	float velocityFactor = smoothstep(0.0, 1.0, abs(velocity) * uVelocityReflectionFactor * 1.2);
-	return mix(mirrorSpec, waveSpec, velocityFactor) * uSpecularStrength * NdotL;
-}
-
-vec3 sampleBlurredBackground(vec2 uv, float radius, vec2 pixel) {
-	if(radius <= 0.001) return texture(uBackgroundTexture, uv).rgb;
-	
-	const int samples = 5;
-	vec2 offsets[samples] = vec2[](
-		vec2(0.0, 0.0),
-		vec2(1.0, 0.0), vec2(-1.0, 0.0), 
-		vec2(0.0, 1.0), vec2(0.0, -1.0)
-	);
-	
-	float weights[samples] = float[](
-		0.5, 0.125, 0.125, 0.125, 0.125
-	);
-	
-	vec3 color = vec3(0.0);
-	for(int i = 0; i < samples; i++) {
-		vec2 sampleUv = clamp(uv + offsets[i] * radius * pixel, 0.0, 1.0);
-		color += texture(uBackgroundTexture, sampleUv).rgb * weights[i];
-	}
-	
-	return color;
+	// then blend
+	float velocityFactor = smoothstep(0.0, 1.0, abs(velocity) * uVelocityReflectionFactor);
+	return mix(mirrorSpec, waveSpec, velocityFactor) * uSpecularStrength;
 }
 
 void main() {
-	vec2 pixel = 1.0 / uResolution;
-	vec3 viewDir = vec3(0.0, 0.0, 1.0);
-	
-	float velocity;
-	vec3 normal = getNormal(texCoord, pixel, velocity);
+	vec2 pixel = vec2(1.0) / uResolution;
+	vec3 viewDir = normalize(vec3(0.0, 0.0, 1.0));
 	
 	vec4 heightData = texture(uWaterHeight, texCoord);
 	float height = heightData.r;
+	float oldHeight = heightData.g;
+	float velocity = (height - oldHeight);
+	
+	vec3 normal = getNormal(texCoord, pixel);
 	float depth = clamp(height * uDepthFactor, 0.0, 1.0);
 	
-	float distortionFactor = min(abs(velocity) * 2.0, 1.0);
-	vec2 refractOffset = normal.xy * uRefraction;
+	// distortion smoothing based on velocity
+	float distortionFactor = smoothstep(0.0, 1.0, abs(velocity));
+	vec2 refractOffset = normal.xy * (uRefraction + distortionFactor * 0.3);
 	vec2 bgCoord = clamp(texCoord + refractOffset, 0.0, 1.0);
 	
-	float viewAngle = 1.0 - max(dot(normal, viewDir), 0.0);
+	float viewAngleBlur = pow(1.0 - max(dot(normal, viewDir), 0.0), 2.0);
+	float blurRadius = uReflectionBlur * (1.0 + distortionFactor * 2.0 + viewAngleBlur);
+	vec3 refractColor = sampleBlurredReflection(bgCoord, blurRadius, pixel);
 	
-	float blurRadius = uReflectionBlur * (1.0 + distortionFactor);
-	vec3 refractColor = sampleBlurredBackground(bgCoord, blurRadius, pixel);
-	
+	// water color with depth (broken ?)
 	float waterDepth = smoothstep(0.0, 1.0, depth);
 	float scatter = clamp(waterDepth * uAtmosphericScatter, 0.0, 1.0);
+	vec3 waterColor = mix(refractColor, uWaterTint, uTintStrength * (scatter + 0.2));
 	
-	vec3 deepWaterColor = mix(uWaterColor, uSkyColor * 0.3, scatter);
-	vec3 waterColor = mix(refractColor, deepWaterColor, waterDepth * uTintStrength * 1.2);
+	float caustic = 0.0;
+	if (uCausticStrength > 0.0) {
+		float detailScale = uCausticDetail * 10.0;
+		float scaledTime = uTime * uCausticSpeed;
+		
+		// noise detail killing cpu ?
+		for (float i = 1.0; i <= 2.0; i++) {
+			float scale = i * uCausticScale;
+			vec2 causticsUV = texCoord * scale + normal.xy * uReflectionDistortion;
+			float timeOffset = scaledTime * i * 0.5;
+			
+			vec2 warp = vec2(
+				sin(causticsUV.y * 2.0 + timeOffset),
+				sin(causticsUV.x * 2.0 + timeOffset * 1.3)
+			);
+			
+			causticsUV += warp * 0.1;
+			
+			float pattern = sin(causticsUV.x * detailScale + timeOffset) * 
+						  sin(causticsUV.y * detailScale + timeOffset * 1.3);
+			
+			caustic += pattern * (1.0/i);
+		}
+		caustic = caustic * 0.5 + 0.5;
+	}
 	
-	float fresnel = pow(viewAngle, max(uFresnelPower, 1.0)) * uFresnelEffect * 1.2;
-	float reflectionStrength = smoothstep(0.0, 1.0, fresnel);
+	vec3 finalColor = waterColor;
 	
-	vec3 sunDir = normalize(uSunDirection);
-	vec3 lightDir = normalize(uLightDirection);
+	float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), uFresnelPower) * uFresnelEffect;
+	fresnel = smoothstep(0.0, 1.0, fresnel);
 	
-	float sunSpecular = getReflection(normal, sunDir, viewDir, velocity);
-	float lightSpecular = getReflection(normal, lightDir, viewDir, velocity);
+	// light reflections
+	vec3 sunRefl = vec3(1.0, 0.97, 0.92) * getReflection(normal, normalize(uSunDirection), viewDir, velocity) * uSunIntensity;
+	vec3 secondaryRefl = vec3(0.97, 0.99, 1.0) * getReflection(normal, normalize(uLightDirection), viewDir, velocity) * uLightIntensity;
 	
-	vec3 subtleSunColor = mix(vec3(1.0), uSunColor, 0.32);
-	vec3 subtleLightColor = mix(vec3(1.0), uLightColor, 0.24);
+	// blend env reflections
+	vec3 envRefl = mix(uSkyColor, vec3(1.0), fresnel) * uEnvMapIntensity;
 	
-	vec3 sunRefl = subtleSunColor * sunSpecular * uSunIntensity * 3.0 * (1.0 + fresnel);
-	vec3 secondaryRefl = subtleLightColor * lightSpecular * uLightIntensity * 2.0 * (1.0 + fresnel * 0.5);
+	finalColor += sunRefl + secondaryRefl;
+	finalColor += envRefl * fresnel * uReflectionFresnel;
 	
-	float caustic = getCaustics(texCoord, normal, velocity);
-	float causticAttenuation = (1.0 - waterDepth) * (1.0 - scatter * 0.7);
-	vec3 causticColor = vec3(1.0, 0.97, 0.9) * caustic * uCausticStrength * uCausticBrightness * causticAttenuation * 1.2;
-	
-	vec3 envColor = mix(uSkyColor, vec3(1.0), reflectionStrength);
-	vec3 reflectionColor = mix(refractColor, envColor, reflectionStrength) * uEnvMapIntensity * uReflectionFresnel;
-	
-	vec3 finalColor = mix(waterColor, reflectionColor, reflectionStrength);
-	finalColor += sunRefl + secondaryRefl + causticColor;
-	
-	finalColor = mix(finalColor, uSkyColor, scatter * uAtmosphericScatter);
+	// depth attenuated caustics (CPU ?)
+	if (uCausticStrength > 0.0) {
+		float causticAttenuation = smoothstep(1.0, 0.0, waterDepth * 2.0);
+		float causticBlend = causticAttenuation * (1.0 - scatter * 0.5); // underwater scatter
+		finalColor += vec3(1.0, 0.97, 0.9) * caustic * uCausticStrength * uCausticBrightness * causticBlend;
+	}
 	
 	fragColor = vec4(clamp(finalColor, 0.0, 1.0), 1.0);
 }`;
 
 		if(DEBUG)
 			console.log("physics program");
-
 		this.physicsProgram = this.createProgram(
 			VERTEX_SHADER,
 			PHYSICS_SHADER
@@ -725,12 +767,11 @@ void main() {
 
 		if(DEBUG)
 			console.log("render program");
-
 		this.renderProgram = this.createProgram(
 			VERTEX_SHADER,
 			RENDER_SHADER
 		);
-
+	
 	}
 
 	async initShadersZip() {
@@ -738,10 +779,15 @@ void main() {
 		if(DEBUG)
 			console.log("init shaders zip");
 
-		const VERTEX_SHADER = await this.decompress("H4sIAAAAAAAAClMuSy0qzszPUzA2MFBILebKzFMoS002UijIL84syczPs84vLYGIlKRWOOfnF6VYl+VnpijkJmbmaWhWwwRtYeq19Ey19Uyt03PiA6AitmWpySYaMHkdAx1DTetaAIBqaOZ3AAAA");
-		const PHYSICS_SHADER = await this.decompress("H4sIAAAAAAAACoVUXW/bIBR936+wNGkCh2A7TdZt1J20dm97iJpKe5j6gGxsI9nG4iNNV+W/T2DskHTT3uDCveecy+G+3zOpuOijqzSNmHo3SFZwF2h43QxR1QqqyWVU0W5omVzdE9PzSsgu2rNiFZkHpkRrNBf9fOAKROaetZo+8o4hc8/V0NKXXUFbhsyO/2bfqGLI/KR7thsYK5G5p93A+xqZrRQDramt6I7msjODyGwl23Nh1E5TzS4IPQpTNL+y9GmO81778J0wvSZKS1PoyEVeXdIgFHcSRuqSltwov1Fasr7Wjd9qSXk7HQ2S0ZIcZyRX0mNtqaSdckR4P3LT7HAnhCyJMNpG1lElaX0nWiF9xZrpRwvwvapYoYHLKoyUrNdbodBIVrK93YQc/Oa5odp2F76ekpa5T/AQndizH6zPW6cKnC5CwivgT28ytlxDybSRfZRi4sNJPiGQU16S+1PigfJJZxy4Y3nOgrair53UvBQaTJpCNh79dPM2T/HXFH/p6AGkGGV46TX47OXpahwUSibOydgrGHu+MV6T417wMuoo7wH0XuAH1uZ2CTKYhP52L6as5axCbSQD505Ek3DoVTaM143OXQ4+IGW6PMWkEhJYT/I8JfwmWxG+WMBX35e+blnu1oDDGG9WV5vPn66vN0SZbvEv3KKl3QAm9IUjXwgFXDWIFO/9EsZOXvzmlzlrgRQiLxxCfCBHS7jjBzDqsPyTbIXjFV6Okl6CLwzj6Q+TczPm9r2CPuIDCncvEGmhqbf82/6EPzdoVMmVnjwM/mo4Pwn4E0zA/ygk81CCECk7psoHNwTys8/Mn7CfDbwClsFNeHeipm2Gl3OZPk2TeBDPQHVC6EZpNoCwDkoxssUhyvAGxvijRbss5ObQbYo/fOC3KQwgF28w3dX4YrTM3UHTaplN64DuOF3muUKCp1rkASo5HkeDns7JPNzsb1oDZTrkjZSiDJLjHw4nVcaJBgAA");
-		const RENDER_SHADER = await this.decompress("H4sIAAAAAAAACo1XS4/bNhC+91cY6IWkaEay10gDrQ7dbIIUaIJgnaSHxR5YmbaJyKJAkVo7xf73gi+9nfawXpEcfTOcxzejXxsmay7KxTqOF6z+pZIs53bjyA/HarEvBFXpeLemp6pgcnWf6pLvhTwtGpavFvqB1aLQiouyPbAAC/2FnxjW97yuCnrZ5rRgrUQLttB/UcXkB8YPR4X1Hc2/H6TQ5e4LOystGdafJWu40PVWUcX6utcLvdXlPZcsN9qx/tNgtOuxNVtd/lEqVtZcXbxsu57CvhWFkF7MP1tD7fP0oqXaKsnKgzpiva1Yrgsqu50HoQ/HktU11u8lq0tWvNvvWa7a5WfxzGT3pl8+sH3h7uLF+lv3vFZCDi7qjf9+mTXynlXq+J7mytzld3USdXVkkufbnCpl1L0rm4+06vnoLdW14nl3j7BhQtmtKsZ27epOGo+5u/qte6YoL4z/GtbZ36F+5FIKOXfyjRUi5+rSc4S3v9u5K7RbS+rCzkuXmIqd3wohd6nQyuzcLPaSHpxrrKcOTH0S8kQLYOUrfmYFNsLOYY1XDv9xed5kLaJF21FFzZbJUjDM4gam4e0MGDlyXtp/F4iG9WCVomxFUt1kRg+4ghjZQytOzjiGkJyXV0SXU1H8U9QYO+HLf6MORCEim9Q5q7SODJHLEhLRv2vQuhDZC6JsKDbyhWRKy9JD8R/MhGUNdIMTCNMXp+fAlM+q2h57aTwOGd+DcfreZjGBXkdMUhvU3GN9/dYGFw2yPHL45HxB87XXxtmyHRoUhdPxTGXlQlvzEnQayQWtSNSajEen5/4pSsgaQkSStJOIMoPs/b+zNZYNSw79RlJ/MAF3+516NDFuJGFNCDFyZ4hsIrLphabz0CA49rnw5OxWDWfPZjGOm1t/2gn1ITvRM9gJBTxKlxcBKvIoEOKYQEyL6kizjmxRj3ft2Sqz/5D9TZ24VYXcL3BSy4TAKCHhrid+9gevAM1FDcw56iFBdJ3CKvEMLPiI3CECkxpJYgLRNZasT0KoY61YBWKCE4KH716lSpSQFYRo0pTQyLvBp9aV6YsNkmvShmAl23WdGXg+9MGTdMd1jTsOtdXndm8zEsdJqLqWWWa6fAPJ+fLDVYzY72um6sfNk62bxyfguAdaJSDB4WnZPcY4aZ+WhjCccc+WviyU3Xh8AmSDSbIa/0DXE3LTHjJLPDFM90ICXqoFz+KU325SHkW+GzjXfG2yvKCnCugmCkbzJ+TujlxDsdGCqQWOsp+4IEBaR6BgOH9KX7z7LET60gi+W5woL4G3xerJEvKqP4r1q8zfBxsfpcOKS3t1mnUN0ZneplcgmZb2XG5lJ16CMc/b21pU6Xqy7bjZtVxy/gvkO6Jb39K9D8dd35bQ2CboGhRMJ8ZOKqhVPW13wR5IzmgwODlLgkNqNzr5JBhrRHNTlr/K3g10meGHhCxHxRh4zdKaORvOicYCNJwkTZljOaGN6aW9YohrXQZOyIbUPeHbwZgNg3Vdejjy+N9owzF9Bq9rqv123zaTNinDOGfy+8ZnkmHr8NdPQGw2eiM8budkRNbYBxLiaQz7s70lUzwPHeBsfwMJnInG7B4az91oZu6feS8yWoOu7ouFrFcQ9WKLBt89aE1s1YQsGIL0PnbI6gaiQVjR6JMJrQZQiGxg5JAwefMakzcQtaPDeBRD068FBEwdTKrZqFj66CDyGkKb6J2zw9FMqcFQawlMX/4FdhFFoPMOAAA=");
+		// https://ctrl-alt-test.fr/minifier/?main
+		// https://github.com/laurentlb/shader-minifier
 
+		const VERTEX_SHADER = await this.decompress("H4sIAAAAAAAAClMuSy0qzszPUzA2MFBILebKzFMoS002UijIL84syczPs84vLYGIlKRWOOfnF6VYl+VnpijkJmbmaWhWwwRtYeq19Ey19Uyt03PiA6AitmWpySYaMHkdAx1DTetaAIBqaOZ3AAAA");
+
+		const PHYSICS_SHADER = await this.decompress("H4sIAAAAAAAACoVUTW+bQBC991cgVYpYvMZgJ20qQg6Ne+vBiqP2EPmwgjGMBCzaD5c04r9XuyyE2JVyY2dn3rw385bPJxASeeNtosgD+akVkKENlFiUrXesOFPJeVSyuq1ArLeJbvDIRe2dIFt7+hEkr7RC3kwXFsDTW6gUe8IaqN6ibCv2ss9YBVTv8S98ZxKo/s1OsG8Bcqq3rG6xKajeCd6yghlEezXBTgw8vRNwQq7lXjEFZ4SeuM7K5zg6THFslAs/cN2oRCqhM+XZyKstarlEK2GgLliOWrqDVAKaQpXuqATDarxqBbA86adOFtL12jHBammJYDNwU9A9cC7yhGtlItfeUbDigVdcJCeOuVczbHzyaq+k0ZYq6JQW4L+XTEck4piUgEWpUlsTdskgCjuoUvPpx2Q1X5Rjr+s0CpMjF76ZEKZRgne3CS4W5HXIYE1RQWq/fSRB+PX2ZvPtNv6ySaSuFx9xW9jWGZe+xSFUYuM+SWDJBRfLJmGX9IZYjZ0/iKJS10EYr2+CdbgcBL7MnEOC0TpO1p+SKeOwtGadP1MddnR+eiFnyucOmc0gR6nSyjrAH5UFM6ClMxweyMr/qOVq8j6h0jyG/NFaLX1nGTyEzoF49E3/u3nuSAzrlmXqonK0ayBrzlUpFbT+vJxGITWYJAhvDP55vfX3fRReXeF9RNzzEHDa8ZHlMy7jA635CX5BNsUOS5fl1mDuf0Izjs6lk9W4HtPb5dzHsLx2rUxoiyJ1+auzcqr4jmOj0v+u4j0DVvGmeDJy0pwr31VS14EYAm8pd1E4DtZO4MfxCJlKoWv95bj9AWD5VhSMWJOq1cU8h3/EIoyimJBkWNriYmu2ZzDrHLjZBOEm6fvevrehOOn76a9hXve1L3VN3VuJaEyS/h+jh5Pl4gUAAA==");
+
+		const RENDER_SHADER = await this.decompress("H4sIAAAAAAAACp1XS4/bNhC+91cY6IWkaNqSs2gWKgs0cYIEaIIgTrJnVqJtbmRRpUivnMX+94IPPb3ebnqxzCHnyZlvhr8euaqFLGer5XLG618qxTPhCHux21ezbSGZTqfUmh2qgqtknZpSbKU6zI48S2bmM69lYbSQZbfhBMzMF3Hg2KxFXRXstMlYwbsTnbCZuWGaq3dc7PYam1cs+75T0pT5F95oozg2nxQ/CmnqjWaaD3WvZmZjyrVQPLPasfnLyujWU2s2pnxfal7WQp/C2W49EetM+iJKfe5RqTda8XKn99hsKp6Zgqme8lma3b7kdY3NW8Xrkhdvtlue6W75Sd5x1XOG5We+LbzR4diQtBa1lmrkUXD+++m1LKSaGrnmld6/ZZmWCps/9UHW1Z4rkW0yprVV96Y8fmDVIBivmam1yHo/WoK9s35VcZ53q1fKRtD7GkhrrpkosLlhR97b30v9IJSS6rGdb7yQmdCnQSCC/T3lVWH8WjF/v6L0Gah581pKlafSaEt5MdsqtvOhcZHacf1RqgMrgM/YI3bfSjS8gPeOI2eaUe1TDoxT8ghTH9jSyWiNpjGJ2N81AJaVNHP3OUE0yneIEpIqro0qA7v4wa0VKwDAo+qygh0qYI5zayJwJpIGJQQvIV4SHBMISTN/kjV6itVaFD1b9f/ROVQGFyuCxnEbBwg/KwxL7L05oYT8pEkXWJ8RhlEY8TyI+Un185b/nP0ZwYkhTB9cCnu8tCWgeN7XRJfQPkMVy4Wpp9m9mmW2FqhLu2WbzVpqVtw4m+mSpFupgCj1TNB5korfaZKKKIIt9dZSby31NorgvZeQi1rT+h+lgVsDgUR0i24hTN0Obyowt/+Q/Vm8JHABEoJYJmswj4m9AXsnqbPW+/f1SMfhC4Kh9w/cQoi8j8i5F4KZttzkRGMy71epczzqC/u8vbSHIWlOP5yl6SAyEXWUh1DCTtxisJ8++FDsuB5fyiqUO3b/i9CY/Ooo+J1deNZjgL42qh9zqd/RA2tALjUIUnrsaEVFQQq0GQUxK6o9o33/Qf3f1O0h6j7h8nNeygN1qpD/BW7b3ksUd5B1EI2nL0B/bY7X/0J0GdMreQec6Em3gwgE5Ow8Ry8JRJe6Rn2QUu9rzSvgbhuPWS+2DgjRWYNOH45S5LMDEyVwpRHKhLpki+FiOMwM74pOwHuJl644Xe/Yu1RYX+wgbX9qK8+fpz0baXDrUKDOB5undJBPtO9lrVgPLa3wvJsWfBjo0/GDabDm7JgvRL+LRjNFQLCgsPZTBR2ff2Ts8Gw487OCxRyxBdPR448l6eDFTRMOCOl4wkDxkuDabuR2xKRu0ESjMcXhmZcjaEwcohEHafed2QWnAo1GHY9FwcL66zfaxhi545G/A9Kc0OPzmRfaW4YEIlde6B1TlU+zWpSgV+EaU+RYIJ5sNd0WiskKwrTfi6gViEjc6pxyDqIXpKMzxWdnnJpWS+QdseW6EDB9aC8ufBG5ishVaE9bUbLCTVzUYsalbuVzpA3qIJxgMNdF0xRGZNW2zek86LDk7HxCIos+MZlPYLTFTAeZCYEw1A7uJ348mvERCOkdkST0taeL6xl6R08BiMYPBZgOQtn/jRzqxJhc/4bJdQLRuOGcdYnRwwi2+vEANoevIS/dy77G8X9LHz+0HpU/fl9FNiu6Bwv23kA8jSdE07cJOrvc88fSJRwZhI+O4gdRm8NTNnT+ukFgcMkxsYkYQC4hrpfNQ4ogcmVBsX16WJUvQsb3lrR5HMP04V/CgG7Fhw8AAA==");
+		
 		this.physicsProgram = this.createProgram(
 			VERTEX_SHADER,
 			PHYSICS_SHADER
@@ -769,14 +815,11 @@ void main() {
 
 		if(DEBUG)
 			console.log("init buffers");
-
 		this.vertexBuffer = this.gl.createBuffer();
-
 		this.gl.bindBuffer(
 			this.gl.ARRAY_BUFFER,
 			this.vertexBuffer
 		);
-
 		this.gl.bufferData(
 			this.gl.ARRAY_BUFFER,
 			this.vertices,
@@ -787,22 +830,15 @@ void main() {
 
 	syncSize() {
 
-		this.ww = this.wrap.offsetWidth;
-		this.wh = this.wrap.offsetHeight;
+		this.ww = window.innerWidth;
+		this.wh = window.innerHeight;
 
-		this.sizeBase = +Math.max(
-			0.4,
-			Math.min(
-				1.0,
-				0.4 + 0.6 * Math.log10(Math.max(
-					this.ww,
-					this.wh
-				) / 420)
-			)
-		)
-		.toFixed(3); // needs fixed ?
+		this.sizeBase = Math.max(
+			this.ww,
+			this.wh
+		) / this.REF_SIZE;
 
-		this.deltaTime = this.BASE_SCALE / this.DISP_SCALE;
+		this.deltaTime = this.STEP * (this.BASE_SCALE / this.DISP_SCALE) * this.STEP_INV;
 
 		if(DEBUG)
 			console.log(
@@ -816,11 +852,12 @@ void main() {
 
 	syncCanvas() {
 
+		// round ?
 		const cw = Math.round(this.ww * this.DISP_SCALE);
 		const ch = Math.round(this.wh * this.DISP_SCALE);
 
-		this.cvs.width = this.bck.width = cw;
-		this.cvs.height = this.bck.height = ch;
+		this.cvs.width = cw;
+		this.cvs.height = ch;
 
 		if(DEBUG)
 			console.log(
@@ -862,17 +899,11 @@ void main() {
 
 	syncUniforms() {
 
-		// force prev even value
-		this.scaledPropagation = 2 * Math.floor((this.params.propagationSpeed * this.DISP_SCALE) / this.BASE_SCALE / 2);
-		// this.scaledPropagation = 2 * Math.floor(this.params.propagationSpeed / this.DISP_SCALE * (Math.max(this.w, this.h) / this.REF_SIZE) / 2);
-		this.uniformize();
-	
-	}
+		// if(DEBUG)console.log("sync uniforms");
 
-	uniformize() {
-
-		this.dirtyPhysics = true;
-		this.dirtyRenders = true;
+		// this.scaledPropagation = this.params.propagationSpeed * this.DISP_SCALE / this.BASE_SCALE;
+		// heaavy render glitch if not rounded ?
+		this.scaledPropagation = Math.round((this.params.propagationSpeed * this.DISP_SCALE) / this.BASE_SCALE);
 	
 	}
 
@@ -885,14 +916,12 @@ void main() {
 
 		this.waterTexture1 = this.createWaterTexture();
 		this.waterTexture2 = this.createWaterTexture();
-
 		this.backgroundTexture = this.createBackgroundTexture();
 
-		this.framebuffer1 = this.createFrameBuf(this.waterTexture1);
-		this.framebuffer2 = this.createFrameBuf(this.waterTexture2);
+		this.framebuffer1 = this.createFramebuffer(this.waterTexture1);
+		this.framebuffer2 = this.createFramebuffer(this.waterTexture2);
 
 		this.currentFramebuffer = this.framebuffer1;
-
 		this.currentTexture = this.waterTexture1;
 		this.previousTexture = this.waterTexture2;
 
@@ -916,6 +945,7 @@ void main() {
 			gl.TEXTURE_2D,
 			texture
 		);
+
 		gl.texImage2D(
 			gl.TEXTURE_2D,
 			0,
@@ -927,6 +957,7 @@ void main() {
 			gl.FLOAT,
 			null
 		);
+
 		gl.texParameteri(
 			gl.TEXTURE_2D,
 			gl.TEXTURE_MIN_FILTER,
@@ -937,6 +968,7 @@ void main() {
 			gl.TEXTURE_MAG_FILTER,
 			gl.NEAREST
 		);
+
 		gl.texParameteri(
 			gl.TEXTURE_2D,
 			gl.TEXTURE_WRAP_S,
@@ -969,6 +1001,7 @@ void main() {
 			gl.TEXTURE_2D,
 			texture
 		);
+
 		gl.texImage2D(
 			gl.TEXTURE_2D,
 			0,
@@ -980,6 +1013,7 @@ void main() {
 			gl.UNSIGNED_BYTE,
 			null
 		);
+
 		gl.texParameteri(
 			gl.TEXTURE_2D,
 			gl.TEXTURE_MIN_FILTER,
@@ -990,6 +1024,7 @@ void main() {
 			gl.TEXTURE_MAG_FILTER,
 			gl.LINEAR
 		);
+
 		gl.texParameteri(
 			gl.TEXTURE_2D,
 			gl.TEXTURE_WRAP_S,
@@ -1005,7 +1040,7 @@ void main() {
 	
 	}
 
-	createFrameBuf(texture) {
+	createFramebuffer(texture) {
 
 		const gl = this.gl;
 		const framebuffer = gl.createFramebuffer();
@@ -1047,7 +1082,7 @@ void main() {
 	handleResize() {
 
 		clearTimeout(this.sizing);
-		this.fadeCanvas(0);
+
 		this.sizing = setTimeout(
 			() =>
 				this.doResize(),
@@ -1062,16 +1097,21 @@ void main() {
 			console.log("window resize");
 
 		this.stopPerfCheck();
+
 		this.amplify.mask(true);
 
-		Promise.resolve()
+		this.fadeCanvas(0)
 		.then(() => {
 
 			this.amplify.updateBounds();
+
 			this.syncLiquid();
+
 			this.fadeCanvas(1);
+
 			this.amplify.mask(false);
-			this.startPerfCheck(2000);
+
+			this.startPerfCheck();
 		
 		});
 	
@@ -1080,9 +1120,13 @@ void main() {
 	syncLiquid() {
 
 		this.syncSize();
+
 		this.syncCanvas();
+
 		this.syncUniforms();
+
 		this.syncViewport();
+
 		this.syncTextures();
 	
 	}
@@ -1121,7 +1165,10 @@ void main() {
 				framebuffer
 			);
 
-			if(gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+			if(
+				gl.checkFramebufferStatus(gl.FRAMEBUFFER)
+				!== gl.FRAMEBUFFER_COMPLETE
+			) {
 
 				throw new Error("incomplete resized framebuffer");
 			
@@ -1155,7 +1202,7 @@ void main() {
 				{}
 			);
 
-		this.physics = {
+		this.physicsUniforms = {
 			...getUniforms(
 				this.physicsProgram,
 				{
@@ -1194,7 +1241,7 @@ void main() {
 			})
 		};
 
-		this.renders = getUniforms(
+		this.renderUniforms = getUniforms(
 			this.renderProgram,
 			{
 				resolution: "Resolution",
@@ -1203,32 +1250,39 @@ void main() {
 				previousState: "PreviousState",
 				waterHeight: "WaterHeight",
 				backgroundTexture: "BackgroundTexture",
+
 				sunDirection: "SunDirection",
 				lightDirection: "LightDirection",
 				sunIntensity: "SunIntensity",
 				lightIntensity: "LightIntensity",
 				sunColor: "SunColor",
 				lightColor: "LightColor",
+
 				refraction: "Refraction",
-				waterColor: "WaterColor",
+				waterTint: "WaterTint",
 				tintStrength: "TintStrength",
 				specularStrength: "SpecularStrength",
 				roughness: "Roughness",
+
 				fresnelEffect: "FresnelEffect",
 				fresnelPower: "FresnelPower",
 				specularPower: "SpecularPower",
+
 				skyColor: "SkyColor",
 				depthFactor: "DepthFactor",
 				atmosphericScatter: "AtmosphericScatter",
 				envMapIntensity: "EnvMapIntensity",
+
 				reflectionFresnel: "ReflectionFresnel",
 				reflectionBlur: "ReflectionBlur",
 				reflectionDistortion: "ReflectionDistortion",
+
 				causticStrength: "CausticStrength",
 				causticScale: "CausticScale",
 				causticSpeed: "CausticSpeed",
 				causticBrightness: "CausticBrightness",
 				causticDetail: "CausticDetail",
+
 				waveReflectionStrength: "WaveReflectionStrength",
 				mirrorReflectionStrength: "MirrorReflectionStrength",
 				velocityReflectionFactor: "VelocityReflectionFactor"
@@ -1240,7 +1294,6 @@ void main() {
 	createProgram(vertexSource, fragmentSource) {
 
 		const gl = this.gl;
-
 		const program = gl.createProgram();
 
 		const createShader = (type, source) => {
@@ -1265,7 +1318,6 @@ void main() {
 				throw new Error(`compile shader fail ${shaderInfo}`);
 			
 			}
-
 			return shader;
 		
 		};
@@ -1305,7 +1357,7 @@ void main() {
 			}
 		
 		}
-		catch(programError) {
+		catch (programError) {
 
 			throw programError;
 		
@@ -1314,7 +1366,6 @@ void main() {
 
 			if(vertShader)
 				gl.deleteShader(vertShader);
-
 			if(fragShader)
 				gl.deleteShader(fragShader);
 		
@@ -1327,72 +1378,24 @@ void main() {
 	physicsStep() {
 
 		const gl = this.gl;
+		const u = this.physicsUniforms;
 
 		gl.useProgram(this.physicsProgram);
-
 		gl.bindFramebuffer(
 			gl.FRAMEBUFFER,
 			this.currentFramebuffer
-		);
-
-		if(this.dirtyPhysics) {
-
-			gl.uniform2f(
-				this.physics.resolution,
-				this.w,
-				this.h
-			);
-
-			gl.uniform1f(
-				this.physics.displayScale,
-				this.DISP_SCALE
-			);
-
-			gl.uniform1f(
-				this.physics.sizeBase,
-				this.sizeBase
-			);
-
-			gl.uniform1f(
-				this.physics.waveSpeed,
-				this.params.waveSpeed
-			);
-
-			gl.uniform1f(
-				this.physics.damping,
-				this.params.damping
-			);
-
-			gl.uniform1f(
-				this.physics.propagationSpeed,
-				this.scaledPropagation
-			);
-
-			this.dirtyPhysics = false;
-		
-		}
-
-		gl.uniform1f(
-			this.physics.deltaTime,
-			this.deltaTime
-		);
-		gl.uniform1f(
-			this.physics.time,
-			this.accumulatedTime
 		);
 
 		gl.bindBuffer(
 			gl.ARRAY_BUFFER,
 			this.vertexBuffer
 		);
-
 		const positionLoc = gl.getAttribLocation(
 			this.physicsProgram,
 			"position"
 		);
 
 		gl.enableVertexAttribArray(positionLoc);
-
 		gl.vertexAttribPointer(
 			positionLoc,
 			2,
@@ -1402,18 +1405,51 @@ void main() {
 			0
 		);
 
-		// also check dirty ?
+		gl.uniform2f(
+			u.resolution,
+			this.w,
+			this.h
+		);
+		gl.uniform1f(
+			u.displayScale,
+			this.DISP_SCALE
+		);
+		gl.uniform1f(
+			u.sizeBase,
+			this.sizeBase
+		);
+		gl.uniform1f(
+			u.deltaTime,
+			this.deltaTime
+		);
+		gl.uniform1f(
+			u.time,
+			this.accumulatedTime
+		);
+		gl.uniform1f(
+			u.waveSpeed,
+			this.params.waveSpeed
+		);
+		gl.uniform1f(
+			u.damping,
+			this.params.damping
+		);
+		gl.uniform1f(
+			u.propagationSpeed,
+			// based on display scale factor
+			this.scaledPropagation
+			// this.params.propagationSpeed
+		);
+
 		this.processTouches();
 
 		gl.activeTexture(gl.TEXTURE0);
-
 		gl.bindTexture(
 			gl.TEXTURE_2D,
 			this.previousTexture
 		);
-
 		gl.uniform1i(
-			this.physics.previousState,
+			u.previousState,
 			0
 		);
 
@@ -1427,79 +1463,65 @@ void main() {
 
 	processTouches() {
 
-		const gl = this.gl;
-
 		const touchArray = Array.from(this.pops.values());
-
 		const touchCount = Math.min(
 			touchArray.length,
-			this.MAX_TOUCHES
+			10
 		);
-
-		gl.uniform1i(
-			this.physics.touchCount,
-			touchCount
-		);
-
-		if(touchCount === 0)
-			return;
 
 		this.touchPositions.fill(0);
+		const gl = this.gl;
+		const u = this.physicsUniforms;
 
 		for(let i = 0; i < touchCount; i++) {
 
 			const touch = touchArray[i];
-			
-			// update positions
+
 			this.touchPositions[i * 2] = touch.x;
 			this.touchPositions[i * 2 + 1] = touch.y;
-			this.touchPositions[(i + touchCount) * 2] = touch.px;
-			this.touchPositions[(i + touchCount) * 2 + 1] = touch.py;
-			
-			// touch params, not fully implemented
-			const touchUniform = this.physics.touches[i];
+
+			this.touchPositions[(i + touchCount) * 2] = touch.prevX;
+			this.touchPositions[(i + touchCount) * 2 + 1] = touch.prevY;
 
 			gl.uniform2f(
-				touchUniform.position,
+				u.touches[i].position,
 				touch.x,
 				touch.y
 			);
-
 			gl.uniform1f(
-				touchUniform.radius,
+				u.touches[i].radius,
 				touch.touchRadius
 			);
-
 			gl.uniform1f(
-				touchUniform.damping,
+				u.touches[i].damping,
 				touch.touchDamping
 			);
-
 			gl.uniform1f(
-				touchUniform.strength,
+				u.touches[i].strength,
 				touch.initialImpact
 			);
-
 			gl.uniform1f(
-				touchUniform.trail,
+				u.touches[i].trail,
 				touch.trailStrength
 			);
-
 			gl.uniform1f(
-				touchUniform.spread,
+				u.touches[i].spread,
 				touch.trailSpread
 			);
-
 			gl.uniform1f(
-				touchUniform.angle,
+				u.touches[i].angle,
 				touch.trailAngle
 			);
 		
 		}
-		
+
 		gl.uniform2fv(
-			this.physics.touchPositions,
+			u.touchPositions,
 			this.touchPositions
+		);
+		gl.uniform1i(
+			u.touchCount,
+			touchCount
 		);
 	
 	}
@@ -1509,7 +1531,6 @@ void main() {
 		const gl = this.gl;
 
 		gl.useProgram(this.renderProgram);
-
 		gl.bindFramebuffer(
 			gl.FRAMEBUFFER,
 			null
@@ -1521,21 +1542,18 @@ void main() {
 			0,
 			1
 		);
-
 		gl.clear(gl.COLOR_BUFFER_BIT);
 
 		gl.bindBuffer(
 			gl.ARRAY_BUFFER,
 			this.vertexBuffer
 		);
-
 		const positionLoc = gl.getAttribLocation(
 			this.renderProgram,
 			"position"
 		);
 
 		gl.enableVertexAttribArray(positionLoc);
-
 		gl.vertexAttribPointer(
 			positionLoc,
 			2,
@@ -1545,48 +1563,35 @@ void main() {
 			0
 		);
 
-		if(this.dirtyRenders)
-			this.updateRenderUniforms();
+		this.updateRenderUniforms();
 
-		gl.uniform1f(
-			this.renders.time,
-			this.accumulatedTime
-		);
-
-		// batch texture bindings
 		gl.activeTexture(gl.TEXTURE0);
-
 		gl.bindTexture(
 			gl.TEXTURE_2D,
 			this.currentTexture
 		);
-
 		gl.uniform1i(
-			this.renders.waterHeight,
+			this.renderUniforms.waterHeight,
 			0
 		);
 
 		gl.activeTexture(gl.TEXTURE1);
-
 		gl.bindTexture(
 			gl.TEXTURE_2D,
 			this.backgroundTexture
 		);
-
 		gl.uniform1i(
-			this.renders.backgroundTexture,
+			this.renderUniforms.backgroundTexture,
 			1
 		);
 
 		gl.activeTexture(gl.TEXTURE2);
-
 		gl.bindTexture(
 			gl.TEXTURE_2D,
 			this.previousTexture
 		);
-
 		gl.uniform1i(
-			this.renders.previousState,
+			this.renderUniforms.previousState,
 			2
 		);
 
@@ -1596,6 +1601,10 @@ void main() {
 			4
 		);
 
+		/*
+		
+		// error checking
+
 		const renderError = gl.getError();
 
 		if(renderError !== gl.NO_ERROR) {
@@ -1603,70 +1612,78 @@ void main() {
 			throw new Error("render step error " + renderError);
 		
 		}
+
+		const fbStatus = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+
+		if(fbStatus !== gl.FRAMEBUFFER_COMPLETE) {
+
+			throw new Error("incomplete framebuffer " + fbStatus);
+		
+		}*/
 	
 	}
 
 	updateRenderUniforms() {
 
 		const gl = this.gl;
+		const u = this.renderUniforms;
+		const p = this.params;
 
-		gl.uniform2fv(
-			this.renders.resolution,
-			[this.w, this.h]
+		gl.uniform2f(
+			u.resolution,
+			this.w,
+			this.h
 		);
-
 		gl.uniform1f(
-			this.renders.displayScale,
+			u.time,
+			this.accumulatedTime
+		);
+		gl.uniform1f(
+			u.displayScale,
 			this.DISP_SCALE
 		);
 
-		Object.keys(this.params)
-		.forEach(prop => {
+		Object.keys(p)
+		.filter(prop =>
+			u[prop] && p[prop] instanceof Array)
+		.forEach(prop =>
+			gl.uniform3fv(
+				u[prop],
+				p[prop]
+			));
 
-			const value = this.params[prop];
-			const rendr = this.renders[prop];
-
-			if(typeof value === "number")
-				gl.uniform1f(
-					rendr,
-					value
-				);
-			else if(value instanceof Array)
-				gl.uniform3fv(
-					rendr,
-					value
-				);
-
-		});
-
-		this.dirtyRenders = false;
+		Object.keys(p)
+		.filter(prop =>
+			u[prop] && typeof p[prop] === "number")
+		.forEach(prop =>
+			gl.uniform1f(
+				u[prop],
+				p[prop]
+			));
 	
 	}
 
 	updateBackgroundTexture() {
 
-		if(!this.image?.complete)
+		if(!this.image?.complete || !this.image.naturalWidth)
 			return;
-	
-		this.btx.fillStyle = "#000000";
-		this.btx.fillRect(
+
+		const gl = this.gl;
+		let cvs = document.createElement("canvas");
+		const ctx = cvs.getContext(
+			"2d",
+			{ alpha: false }
+		);
+
+		cvs.width = this.w;
+		cvs.height = this.h;
+
+		ctx.fillStyle = "#000000";
+		ctx.fillRect(
 			0,
 			0,
 			this.w,
 			this.h
-		);
-
-		// flip coordinate system
-		this.btx.save();
-
-		this.btx.translate(
-			0,
-			this.h
-		);
-
-		this.btx.scale(
-			1,
-			-1
 		);
 
 		const imgW = this.image.naturalWidth;
@@ -1693,7 +1710,7 @@ void main() {
 		
 		}
 
-		this.btx.drawImage(
+		ctx.drawImage(
 			this.image,
 			sx,
 			sy,
@@ -1707,92 +1724,90 @@ void main() {
 
 		this.fish.forEach(fish => {
 
-			const {
-				x, y, w, h
-			} = fish.c();
+			if(fish.i?.complete) {
 
-			this.btx.globalAlpha = 0.55;
-			this.btx.shadowColor = "#000000";
-			this.btx.shadowBlur = 16;
+				const { x, y, w, h } = fish.c();
 
-			this.btx.drawImage(
-				fish.i,
-				x,
-				y,
-				w,
-				h
-			);
+				ctx.globalAlpha = 0.55;
+				ctx.shadowColor = "#000000";
+				ctx.shadowBlur = 16;
+				ctx.drawImage(
+					fish.i,
+					x,
+					y,
+					w,
+					h
+				);
+			
+			}
 		
 		});
-
-		this.btx.restore();
-
-		// update texture
-		const gl = this.gl;
 
 		gl.bindTexture(
 			gl.TEXTURE_2D,
 			this.backgroundTexture
 		);
-
 		gl.texImage2D(
 			gl.TEXTURE_2D,
 			0,
 			gl.RGBA,
 			gl.RGBA,
 			gl.UNSIGNED_BYTE,
-			this.bck
+			cvs
 		);
+
+		ctx.clearRect(
+			0,
+			0,
+			this.w,
+			this.h
+		);
+		cvs.width = cvs.height = 0;
+		cvs = null;
 	
 	}
 
-	toggleRender() {
+	toggleRenderLoop() {
 
 		if(this.isRunning)
-			this.stopRender();
+			this.stopRenderLoop();
 		else
-			this.startRender();
+			this.startRenderLoop();
 	
 	}
 
-	startRender() {
+	startRenderLoop() {
 
 		if(this.isRunning)
 			return;
-
 		if(DEBUG)
-			console.log("start loop");
+			console.log("start render loop");
 
-		let perfCheck = this.SCALE_TIME;
-
-		if(!this.lastFrameTime) {
-
-			if(DEBUG)
-				console.log("first loop");
-
-			perfCheck *= 2;
-		
-		}
+		this.renderText("liquify");
 
 		this.isRunning = true;
 		this.amplify.toggle("flow");
 		this.lastFrameTime = performance.now();
-		this.startPerfCheck(perfCheck);
+		this.startPerfCheck();
 		this.nextFrame();
 	
 	}
 
-	stopRender() {
+	stopRenderLoop() {
 
 		if(!this.isRunning)
 			return;
-
 		if(DEBUG)
-			console.log("stop loop");
+			console.log("stop render loop");
 
 		this.isRunning = false;
+
 		cancelAnimationFrame(this.loop);
+
 		this.stopPerfCheck();
+
+		this.renderInfo("--");
+
 		this.amplify.toggle(
 			"flow",
 			false
@@ -1809,36 +1824,42 @@ void main() {
 
 	renderLoop(currentTime) {
 
+		/*
+		// will throw error anyway ?
+		if(!this.gl || this.gl.isContextLost()) {
+
+			this.stopRenderLoop();
+
+			throw new Error("webgl context lost");
+		
+		}
+			*/
+
 		this.accumulatedTime += this.deltaTime;
-		this.nextFrame();
 
 		this.physicsStep();
 		this.swapBuffers();
+
 		this.renderStep();
 
-		this.checkPerfs(currentTime);
+		this.checkPerformance(currentTime);
+
+		// if(this.isRunning)
+		this.nextFrame();
 	
 	}
 
-	startPerfCheck(chk = this.SCALE_TIME) {
+	startPerfCheck(chk = this.SCALE_CHECK_INTERVAL) {
 
 		if(this.PERF_CHECK)
 			return;
-	
-		if(DEBUG)
-			console.log(
-				"perf run",
-				chk
-			);
-	
+
+		// if(DEBUG) console.log("perf run");
+
 		this.PERF_CHECK = true;
 
-		this.frameTimeHistory = new Array(this.FRAME_SIZE)
-		.fill(16.67); // ~60fps default
-		this.frameTimeSum = this.FRAME_SIZE * 16.67;
-		this.frameTimeIndex = 0;
-	
 		this.notBefore = this.lastFrameTime + chk;
+		// this.frameTimeHistory = new Array(30).fill(16.67);
 	
 	}
 
@@ -1847,52 +1868,57 @@ void main() {
 		if(!this.PERF_CHECK)
 			return;
 
-		if(DEBUG)
-			console.log("perf stop");
+		// if(DEBUG) console.log("stop perf check");
 
-		this.renderInfo("--");
 		this.PERF_CHECK = false;
+
 		this.LOOP_COUNT = 0;
+
 		this.currentFPS = 0;
 	
 	}
 
-	checkPerfs(currentTime) {
+	checkPerformance(currentTime) {
 
 		const frameTime = currentTime - this.lastFrameTime;
 
 		this.lastFrameTime = currentTime;
-	
+
+		if(!this.PERF_CHECK || currentTime < this.notBefore)
+			return;
+
 		this.frameTimeHistory[this.frameTimeIndex] = frameTime;
-		this.frameTimeIndex = (this.frameTimeIndex + 1) & (this.frameTimeHistory.length - 1);
-	
-		this.frameTimeSum = this.frameTimeSum - this.frameTimeHistory[this.frameTimeIndex] + frameTime;
-		const avgFrameTime = this.frameTimeSum / this.frameTimeHistory.length;
-		
+		this.frameTimeIndex
+			= (this.frameTimeIndex + 1) % this.frameTimeHistory.length;
+
+		const avgFrameTime
+			= this.frameTimeHistory.reduce((a, b) =>
+				a + b)
+			/ this.frameTimeHistory.length;
 		const updatedFPS = Math.round(1000 / avgFrameTime);
-	
+
 		if(updatedFPS !== this.currentFPS) {
 
-			this.currentFPS = updatedFPS;
-			this.renderInfo(("" + updatedFPS).padStart(
+			this.renderInfo(updatedFPS.toString()
+			.padStart(
 				2,
 				"0"
 			));
 		
 		}
-	
-		if(!this.PERF_CHECK || currentTime < this.notBefore)
-			return;
-	
-		if(currentTime - this.lastScaleCheck >= this.SCALE_TIME) {
+
+		this.currentFPS = updatedFPS;
+
+		if(currentTime - this.lastScaleCheck >= this.SCALE_CHECK_INTERVAL) {
 
 			this.lastScaleCheck = currentTime;
+
 			this.LOOP_COUNT++;
-	
+
 			if(this.LOOP_COUNT >= this.LOOPS_TO_SCALE) {
 
 				this.LOOP_COUNT = 0;
-	
+
 				if(this.currentFPS < this.TARGET_FPS) {
 
 					this.downScale();
@@ -1916,14 +1942,13 @@ void main() {
 
 	downScale() {
 
-		if(this.DISP_SCALE === this.MIN_SCALE)
+		if(this.DISP_SCALE == this.MIN_SCALE)
 			return;
 
 		if(DEBUG)
 			console.log("downscale");
 
 		this.DOWN_FROM = this.DISP_SCALE - this.SCALE_STEP;
-
 		this.setDisplayScale(this.DISP_SCALE - this.SCALE_STEP);
 	
 	}
@@ -1940,36 +1965,54 @@ void main() {
 	
 	}
 
-	setDisplayScale(scale) {
+	setDisplayScale(ds) {
 
-		if(scale === this.DISP_SCALE)
+		ds = Math.max(
+			Math.min(
+				this.MAX_SCALE,
+				ds
+			),
+			this.MIN_SCALE
+		);
+
+		if(ds == this.DISP_SCALE)
 			return;
+
+		if(DEBUG)
+			console.log(
+				"set scale",
+				ds
+			);
 
 		this.stopPerfCheck();
 
-		this.DISP_SCALE = Math.max(
-			this.MIN_SCALE,
-			Math.min(
-				this.MAX_SCALE,
-				scale
-			)
-		);
+		this.renderText((ds > this.DISP_SCALE ? "up" : "down") + "scale");
+
+		this.LOOP_COUNT = 0;
 		
+		// this.DISP_SCALE = Math.round(ds * 2) / 2; // clean round ?
+		this.DISP_SCALE = ds;
+
 		this.syncLiquid();
+
 		this.startPerfCheck();
 	
 	}
 
 	renderText(str) {
 
-		window.requestAnimationFrame(() =>
-			(this.infos.textContent = str));
+		// disp on next frame
+		window.requestAnimationFrame(() => {
+
+			this.infos.textContent = str;
+		
+		});
 	
 	}
 
 	renderInfo(fps) {
 
-		this.infos.textContent = (DEBUG ? this.ww + "x" + this.wh + "\n" : "") + "x" + this.DISP_SCALE.toString() + " " + fps;
+		this.infos.textContent = "x" + this.DISP_SCALE.toString() + " " + fps;
 	
 	}
 
@@ -2002,6 +2045,7 @@ void main() {
 			console.log(focused ? "focus" : "blur");
 
 		this.isFocused = focused;
+
 		this.activeChange();
 	
 	}
@@ -2009,9 +2053,9 @@ void main() {
 	activeChange() {
 
 		if(this.isActive)
-			this.startRender();
+			this.startRenderLoop();
 		else
-			this.stopRender();
+			this.stopRenderLoop();
 	
 	}
 
@@ -2020,34 +2064,43 @@ void main() {
 		if(DEBUG)
 			console.log("hash changed");
 
-		this.load(this.amplify.hashParams());
+		// alert("hash");
+
+		// window.location.reload();
 	
 	}
 
 	swapBuffers() {
 
 		[this.currentFramebuffer, this.currentTexture, this.previousTexture] = [
-			this.currentFramebuffer === this.framebuffer1 ? this.framebuffer2 : this.framebuffer1,
-			this.currentTexture === this.waterTexture1 ? this.waterTexture2 : this.waterTexture1,
-			this.previousTexture === this.waterTexture1 ? this.waterTexture2 : this.waterTexture1
+			this.currentFramebuffer === this.framebuffer1
+				? this.framebuffer2
+				: this.framebuffer1,
+			this.currentTexture === this.waterTexture1
+				? this.waterTexture2
+				: this.waterTexture1,
+			this.previousTexture === this.waterTexture1
+				? this.waterTexture2
+				: this.waterTexture1
 		];
 	
 	}
 
-	resetWater() {
+	resetWaterState() {
 
 		if(DEBUG)
-			console.log("reset water");
+			console.log("reset state");
 
 		const gl = this.gl;
-		const flat = new Float32Array(this.w * this.h * 4);
+		const initialData = new Float32Array(this.w * this.h * 4);
 
-		for(let i = 0; i < flat.length; i += 4) {
+		// still water
+		for(let i = 0; i < initialData.length; i += 4) {
 
-			flat[i] = 0.0; // height
-			flat[i + 1] = 0.0; // prev height
-			flat[i + 2] = 0.0; // velocity
-			flat[i + 3] = 1.0; // alpha
+			initialData[i] = 0.0; // height
+			initialData[i + 1] = 0.0; // prev height
+			initialData[i + 2] = 0.0; // velocity
+			initialData[i + 3] = 1.0; // alpha
 		
 		}
 
@@ -2057,7 +2110,6 @@ void main() {
 				gl.TEXTURE_2D,
 				texture
 			);
-
 			gl.texImage2D(
 				gl.TEXTURE_2D,
 				0,
@@ -2067,7 +2119,7 @@ void main() {
 				0,
 				gl.RGBA,
 				gl.FLOAT,
-				flat
+				initialData
 			);
 		
 		});
@@ -2117,7 +2169,7 @@ void main() {
 	
 	}
 
-	// pointers handling
+	// POINTERS
 
 	genPopId() {
 
@@ -2129,11 +2181,8 @@ void main() {
 
 	getPointerPos(evt) {
 
-		// const cx = evt.clientX - this.wrap.offsetLeft;
-		// const cy = evt.clientY - this.wrap.offsetTop;
-
-		const cx = evt.offsetX;
-		const cy = evt.offsetY;
+		const cx = evt.clientX,
+			cy = evt.clientY;
 
 		return {
 			x: cx * this.DISP_SCALE,
@@ -2141,9 +2190,21 @@ void main() {
 			rx: cx,
 			ry: cy
 		};
+
+		// round ?
+		/*const cx = Math.round(evt.clientX), 
+			cy = Math.round(evt.clientY);
+
+		return {
+			x: Math.round(cx * this.DISP_SCALE), 
+			y: Math.round(this.h - cy * this.DISP_SCALE),
+			rx: cx,
+			ry: cy
+		};*/
 	
 	}
 
+	// args ?
 	pointOptions() {
 
 		return {
@@ -2159,11 +2220,14 @@ void main() {
 
 	doNotTouch(evt) {
 
+		// kill iOS magnifier
 		evt.preventDefault();
 	
 	}
 
 	handlePointerStart(evt) {
+
+		// evt.preventDefault();
 
 		const pId = evt.pointerId;
 
@@ -2171,6 +2235,7 @@ void main() {
 			this.isTouched = true;
 
 		this.cvs.setPointerCapture(pId);
+
 		const pos = this.getPointerPos(evt);
 
 		this.pops.set(
@@ -2178,8 +2243,8 @@ void main() {
 			{
 				x: pos.x,
 				y: pos.y,
-				px: pos.x,
-				py: pos.y,
+				prevX: pos.x,
+				prevY: pos.y,
 				...this.pointOptions()
 			}
 		);
@@ -2188,6 +2253,8 @@ void main() {
 
 	handlePointerMove(evt) {
 
+		// evt.preventDefault();
+
 		const pId = evt.pointerId;
 
 		if(this.pops.has(pId)) {
@@ -2195,10 +2262,11 @@ void main() {
 			const pop = this.pops.get(pId);
 			const pos = this.getPointerPos(evt);
 
-			pop.px = pop.x;
-			pop.py = pop.y;
+			pop.prevX = pop.x;
+			pop.prevY = pop.y;
 			pop.x = pos.x;
 			pop.y = pos.y;
+
 			pop.rx = pos.rx;
 			pop.ry = pos.ry;
 
@@ -2261,7 +2329,32 @@ void main() {
 	
 	}
 
-	// getters
+	/*destroy() {
+		this.isVisible = false;
+		cancelAnimationFrame(this.loop);
+		this.sizer.disconnect();
+
+		const gl = this.gl;
+		if(gl) {
+			[
+				this.waterTexture1,
+				this.waterTexture2,
+				this.backgroundTexture,
+			].forEach((tex) =>
+				gl.deleteTexture(tex));
+			[this.framebuffer1, this.framebuffer2].forEach((fb) =>
+				gl.deleteFramebuffer(fb)
+			);
+			gl.deleteBuffer(this.vertexBuffer);
+			gl.deleteProgram(this.physicsProgram);
+			gl.deleteProgram(this.renderProgram);
+		}
+
+		this.cvs.remove();
+		this.pops.clear();
+	}*/
+
+	// GETTERS
 
 	get w() {
 
@@ -2277,11 +2370,11 @@ void main() {
 
 	get isActive() {
 
-		return (this.isVisible || !this.PAUSE_HIDE) && (this.isFocused || !this.PAUSE_BLUR);
+		return this.isVisible && this.isFocused;
 	
 	}
 
-	// utils
+	// UTIL
 
 	randRange(min, max) {
 
@@ -2289,8 +2382,14 @@ void main() {
 	
 	}
 
-	// effects
+	// EFFECTS
 
+	/**
+	 * @method dropIt : 
+	 * @param {number=} x :
+	 * @param {number=} y :
+	 * @param {number=} o :
+	 */
 	dropIt(x, y, o = 75) {
 
 		x ||= this.randRange(
@@ -2303,21 +2402,32 @@ void main() {
 		);
 
 		const dropId = "drop_" + this.genPopId();
+
 		const point = {
 			x,
 			y,
-			px: x,
-			py: y,
+			prevX: x,
+			prevY: y,
 			...this.pointOptions()
+			// touchRadius: 0.015,
+			// touchDamping: 990,
+			// initialImpact: 0.15,
+			// trailStrength: 0.001,
+			// trailSpread: 0,
+			// trailAngle: this.params.trailAngle
 		};
 
 		this.pops.set(
 			dropId,
 			point
 		);
+
 		setTimeout(
-			() =>
-				this.pops.delete(dropId),
+			() => {
+
+				this.pops.delete(dropId);
+		
+			},
 			o + Math.round(Math.random() * 100)
 		);
 	
@@ -2327,6 +2437,7 @@ void main() {
 
 		const centerX = this.w * 0.5;
 		const centerY = this.h * 0.5;
+
 		const offCenterX = 0.3;
 		const offCenterY = 0.3;
 
@@ -2334,6 +2445,7 @@ void main() {
 		const startY = centerY + (Math.random() - 0.5) * this.h * offCenterY;
 		const endX = centerX + this.w * offCenterX;
 		const endY = centerY + (Math.random() - 0.5) * this.h * offCenterY;
+
 		const ctrlX = centerX + (Math.random() - 0.5) * this.w * 0.2;
 		const ctrlY = centerY + (Math.random() - 0.5) * this.h * 0.4;
 
@@ -2341,9 +2453,12 @@ void main() {
 		const point = {
 			x: startX,
 			y: startY,
-			px: startX,
-			py: startY,
+			prevX: startX,
+			prevY: startY,
 			...this.pointOptions()
+			// touchRadius: 0.015,
+			// trailStrength: 0.08,
+			// trailSpread: 0.05
 		};
 
 		this.pops.set(
@@ -2361,19 +2476,20 @@ void main() {
 			if(progress >= 1) {
 
 				this.pops.delete(touchId);
-
 				return;
 			
 			}
 
-			point.px = point.x;
-			point.py = point.y;
+			point.prevX = point.x;
+			point.prevY = point.y;
 
 			const t = progress;
 			const invT = 1 - t;
 
-			point.x = invT * invT * startX + 2 * invT * t * ctrlX + t * t * endX;
-			point.y = invT * invT * startY + 2 * invT * t * ctrlY + t * t * endY;
+			point.x
+				= invT * invT * startX + 2 * invT * t * ctrlX + t * t * endX;
+			point.y
+				= invT * invT * startY + 2 * invT * t * ctrlY + t * t * endY;
 
 			window.requestAnimationFrame(animate);
 		
@@ -2391,18 +2507,20 @@ void main() {
 			this.w,
 			this.h
 		) * 0.05;
-		const speed = 0.005;
+		const speed = 0.005; // rad / ms
 
 		const touchId = "circle_" + this.genPopId();
-		const startAngle = Math.random() * Math.PI * 2;
+		const startAngle = Math.random() * this.TWO_PI;
 
 		const point = {
 			x: centerX + Math.cos(startAngle) * radius,
 			y: centerY + Math.sin(startAngle) * radius,
-			px: centerX + Math.cos(startAngle) * radius,
-			py: centerY + Math.sin(startAngle) * radius,
+			prevX: centerX + Math.cos(startAngle) * radius,
+			prevY: centerY + Math.sin(startAngle) * radius,
 			...this.pointOptions(),
 			touchRadius: 0.02
+			// trailStrength: 0.15,
+			// trailSpread: 0.1
 		};
 
 		this.pops.set(
@@ -2419,8 +2537,8 @@ void main() {
 			const elapsed = performance.now() - startTime;
 			const angle = startAngle + elapsed * speed;
 
-			point.px = point.x;
-			point.py = point.y;
+			point.prevX = point.x;
+			point.prevY = point.y;
 			point.x = centerX + Math.cos(angle) * radius;
 			point.y = centerY + Math.sin(angle) * radius;
 
@@ -2436,6 +2554,7 @@ void main() {
 
 		const centerX = this.w * 0.5;
 		const centerY = this.h * 0.5;
+
 		const startX = centerX + (Math.random() - 0.5) * this.w * 0.3;
 		const startY = centerY + (Math.random() - 0.5) * this.h * 0.3;
 
@@ -2443,8 +2562,8 @@ void main() {
 		const point = {
 			x: startX,
 			y: startY,
-			px: startX,
-			py: startY,
+			prevX: startX,
+			prevY: startY,
 			...this.pointOptions(),
 			touchRadius: 0.02,
 			trailStrength: 0.12,
@@ -2458,11 +2577,13 @@ void main() {
 
 		const duration = 2500;
 		const startTime = performance.now();
-		const radiusX = this.w * 0.15;
+
+		// curve width & height
+		const radiusX = this.w * 0.15; 
 		const radiusY = this.h * 0.15;
-		const loops = 1.5 + Math.random();
+		const loops = 1.5 + Math.random(); // how many loops
 		const drift = {
-			x: (Math.random() - 0.5) * 0.3,
+			x: (Math.random() - 0.5) * 0.3, 
 			y: (Math.random() - 0.5) * 0.3
 		};
 
@@ -2474,13 +2595,12 @@ void main() {
 			if(progress >= 1) {
 
 				this.pops.delete(touchId);
-
 				return;
 			
 			}
 
-			point.px = point.x;
-			point.py = point.y;
+			point.prevX = point.x;
+			point.prevY = point.y;
 
 			const angle = progress * Math.PI * 2 * loops;
 
@@ -2495,97 +2615,7 @@ void main() {
 	
 	}
 
-	// rain
-
-	toggleRain() {
-
-		if(this.isRaining)
-			this.stopRain();
-		else
-			this.startRain();
-	
-	}
-
-	startRain() {
-
-		this.isRaining = true;
-		this.lastRainDrop = 0;
-		this.activeRaindrops = new Set();
-		this.animateRain();
-		this.amplify.toggle("rain");
-	
-	}
-
-	animateRain() {
-
-		if(!this.isRaining)
-			return;
-
-		const currentTime = performance.now();
-
-		if(
-			currentTime - this.lastRainDrop > this.rainDropDelay
-			&& this.activeRaindrops.size < this.maxRaindrops
-			&& this.pops.size < 8
-		) {
-
-			this.createRaindrop();
-			this.lastRainDrop = currentTime;
-		
-		}
-
-		requestAnimationFrame(() =>
-			this.animateRain());
-	
-	}
-
-	createRaindrop() {
-
-		const x = Math.random() * this.w;
-		const y = Math.random() * this.h;
-		const dropId = "rain_" + this.genPopId();
-
-		const impactPoint = {
-			x,
-			y,
-			px: x,
-			py: y,
-			...this.pointOptions(),
-			touchRadius: 0.02,
-			// touchDamping: 0.35,
-			initialImpact: 0.24
-		};
-
-		this.pops.set(
-			dropId + "_impact",
-			impactPoint
-		);
-
-		this.activeRaindrops.add(dropId);
-		
-		setTimeout(
-			() => {
-
-				this.pops.delete(dropId + "_impact");
-				this.activeRaindrops.delete(dropId);
-		
-			},
-			80
-		);
-	
-	}
-
-	stopRain() {
-
-		this.isRaining = false;
-		this.amplify.toggle(
-			"rain",
-			false
-		);
-	
-	}
-	
-	// swirls
+	// SWIRLS
 
 	createSwirl(x, y, radius, params, dur, startAngle, ease) {
 
@@ -2598,8 +2628,8 @@ void main() {
 		const popped = {
 			x: initialX,
 			y: initialY,
-			px: initialX,
-			py: initialY,
+			prevX: initialX,
+			prevY: initialY,
 			...this.pointOptions(),
 			...params
 		};
@@ -2629,8 +2659,8 @@ void main() {
 
 					const pop = this.pops.get(popId);
 
-					pop.px = pop.x;
-					pop.py = pop.y;
+					pop.prevX = pop.x;
+					pop.prevY = pop.y;
 					pop.x = x + Math.cos(angle) * currentRadius;
 					pop.y = y + Math.sin(angle) * currentRadius;
 
@@ -2692,7 +2722,126 @@ void main() {
 	
 	}
 
-	// auto
+	// RAIN
+
+	toggleRain() {
+
+		if(this.isRaining)
+			this.stopRain();
+		else
+			this.startRain();
+	
+	}
+
+	startRain() {
+
+		this.isRaining = true;
+		this.lastRainDrop = 0;
+		this.activeRaindrops = new Set();
+
+		this.animateRain();
+		this.amplify.toggle("rain");
+	
+	}
+
+	animateRain() {
+
+		if(!this.isRaining)
+			return;
+
+		const currentTime = performance.now();
+
+		if(
+			currentTime - this.lastRainDrop > this.rainDropDelay
+			&& this.activeRaindrops.size < this.maxRaindrops
+			&& this.pops.size < 8
+		) {
+
+			this.createRaindrop();
+			this.lastRainDrop = currentTime;
+		
+		}
+
+		requestAnimationFrame(() =>
+			this.animateRain());
+	
+	}
+
+	createRaindrop() {
+
+		const x = Math.random() * this.w;
+		const y = Math.random() * this.h;
+		const dropId = "rain_" + this.genPopId();
+
+		// impact
+		const impactPoint = {
+			x,
+			y,
+			prevX: x,
+			prevY: y,
+			...this.pointOptions(),
+			touchRadius: 0.02,
+			touchDamping: 0.35,
+			initialImpact: 0.12
+			// trailStrength: 0.1,
+		};
+
+		this.pops.set(
+			dropId + "_impact",
+			impactPoint
+		);
+
+		// then splash
+		setTimeout(
+			() => {
+
+				const splashPoint = {
+					x,
+					y,
+					prevX: x,
+					prevY: y,
+					...this.pointOptions(),
+					touchRadius: 0.06,
+					touchDamping: 0.35,
+					initialImpact: 0.12
+					// trailStrength: 0.1,
+					// trailSpread: 2.0
+				};
+
+				this.pops.set(
+					dropId + "_splash",
+					splashPoint
+				);
+		
+			},
+			64
+		);
+
+		this.activeRaindrops.add(dropId);
+		setTimeout(
+			() => {
+
+				this.pops.delete(dropId + "_impact");
+				this.pops.delete(dropId + "_splash");
+				this.activeRaindrops.delete(dropId);
+		
+			},
+			72
+		);
+	
+	}
+
+	stopRain() {
+
+		this.isRaining = false;
+		this.amplify.toggle(
+			"rain",
+			false
+		);
+	
+	}
+
+	// AUTOTOUCH
 
 	toggleAutoTouch() {
 
@@ -2707,35 +2856,18 @@ void main() {
 
 		if(this.isAuto)
 			return;
-		
+
 		this.isAuto = true;
 		const touchId = "auto";
-
-		const config = {
-			freqX: 0.15,
-			freqY: 0.23,
-			phaseX: 0,
-			phaseY: Math.PI / 4,
-			speedMin: 3,
-			speedMax: 6,
-			speedChangeRate: 0.004,
-			speedChangeInterval: 3000,
-			centerX: this.w * 0.5,
-			centerY: this.h * 0.5,
-			radiusX: this.w * 0.35,
-			radiusY: this.h * 0.35
-		};
-
 		let time = 0;
-		let currentSpeed = 2.5;
-		let targetSpeed = 2.5;
-		let lastSpeedChange = 0;
 
 		const point = {
-			x: config.centerX,
-			y: config.centerY,
-			px: config.centerX,
-			py: config.centerY,
+			x: this.w / 2,
+			y: this.h / 2,
+			prevX: this.w / 2,
+			prevY: this.h / 2,
+			speed: 0.01,
+			scale: 0.5,
 			...this.pointOptions()
 		};
 
@@ -2744,42 +2876,23 @@ void main() {
 			point
 		);
 
-		const updateSpeed = timestamp => {
-
-			if(timestamp - lastSpeedChange > config.speedChangeInterval) {
-
-				targetSpeed = config.speedMin + Math.random() * (config.speedMax - config.speedMin);
-				lastSpeedChange = timestamp;
-			
-			}
-			
-			currentSpeed += (targetSpeed - currentSpeed) * config.speedChangeRate;
-
-			return currentSpeed;
-		
-		};
-
 		const animate = () => {
 
 			if(!this.isAuto) {
 
 				this.pops.delete(touchId);
-
 				return;
 			
 			}
 
-			point.px = point.x;
-			point.py = point.y;
+			time += point.speed;
+			point.prevX = point.x;
+			point.prevY = point.y;
 
-			const speed = updateSpeed(performance.now());
+			point.x = this.w * (0.5 + point.scale * Math.sin(time));
+			point.y = this.h * (0.5 + point.scale * Math.cos(time * 1.5));
 
-			time += 0.016 * speed;
-
-			point.x = config.centerX + config.radiusX * Math.sin(config.freqX * time + config.phaseX);
-			point.y = config.centerY + config.radiusY * Math.sin(config.freqY * time + config.phaseY);
-
-			requestAnimationFrame(animate);
+			window.requestAnimationFrame(animate);
 		
 		};
 
@@ -2792,82 +2905,12 @@ void main() {
 
 		if(!this.isAuto)
 			return;
-
 		if(DEBUG)
 			console.log("stop auto touch");
-
 		this.isAuto = false;
 		this.amplify.toggle(
 			"point",
 			this.isAuto
-		);
-	
-	}
-
-	// test
-
-	toggleTest() {
-
-		if(this.isTest)
-			this.stopTest();
-		else
-			this.startTest();
-	
-	}
-
-	startTest() {
-
-		if(this.isTest)
-			return;
-		
-		this.isTest = true;
-
-		this.testLoop = setInterval(
-			() => {
-
-				const x = this.w / 2;
-				const y = this.h / 2;
-				const dropId = "test_" + this.genPopId();
-
-				this.pops.set(
-					dropId,
-					{
-						x,
-						y,
-						px: x,
-						py: y,
-						...this.pointOptions()
-					}
-				);
-		
-				setTimeout(
-					() =>
-						this.pops.delete(dropId),
-					256
-				);
-
-			},
-			500
-		);
-		
-		this.amplify.toggle("test");
-	
-	}
-
-	stopTest() {
-
-		if(!this.isTest)
-			return;
-
-		if(DEBUG)
-			console.log("stop test");
-
-		clearInterval(this.testLoop);
-
-		this.isTest = false;
-		this.amplify.toggle(
-			"test",
-			this.isTest
 		);
 	
 	}

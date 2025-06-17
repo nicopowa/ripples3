@@ -8,8 +8,8 @@
 	--col: rgba(0, 0, 0, 1);
 	--hil: rgba(0, 128, 255, 1);
 	--rad: 4px;
-	--pad: .2em;
-	--spc: .3em;
+	--pad: 4px;
+	--spc: 6px;
 	--icn: 36px;
 }
 
@@ -22,15 +22,51 @@
 	}
 }
 
-#ripples3 {
-	position: relative;
+html {
+	margin: 0;
+	padding: 0;
+
 	width: 100%;
 	height: 100%;
+
+	touch-action: none;
+}
+
+html, body {
+	overscroll-behavior-x: none;
+}
+
+body {
+	margin: 0;
+	padding: 0;
+
+	width: 100%;
+	height: 100%;
+
 	overflow: hidden;
+
+	font-family: "Courier New", Courier, monospace;
+
+	background-color: #1A1A1A;
+
+	-webkit-text-size-adjust: 100%;
+	-webkit-tap-highlight-color: transparent;
+
+	-webkit-touch-callout: none;
+
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+
+div,
+span {
+	box-sizing: border-box;
 }
 
 canvas {
-	position: absolute;
+	position: fixed;
 	top: 0;
 	left: 0;
 	width: 100%;
@@ -44,8 +80,7 @@ canvas {
 }
 
 .err {
-	position: absolute;
-	box-sizing: border-box;
+	position: fixed;
 	top: 50%;
 	left: 50%;
 	width: 90%;
@@ -65,12 +100,12 @@ canvas {
 
 #fps {
 	position: absolute;
-	bottom: 0px;
-	right: 0px;
+	bottom: 3px;
+	right: 3px;
 	z-index: 100;
 	color: var(--col);
 	opacity: 0.5;
-	padding: .1em var(--pad) 0em var(--pad);
+	padding: 0 var(--pad);
 	font-size: 1.1em;
 	pointer-events: none;
 	background: var(--back);
@@ -78,11 +113,11 @@ canvas {
 
 /* MENU BTN */
 
-#ripples3 .gear {
+.gear {
 	pointer-events: all;
-	position: absolute;
+	position: fixed;
 	left: 100%;
-	/* top: 0; */
+	top: 0;
 	padding-top: var(--spc);
 	padding-left: var(--spc);
 	/* left: calc(100% + var(--spc)); */
@@ -92,8 +127,8 @@ canvas {
 	z-index: 10;
 	cursor: pointer;
 	background-color: var(--bcck);
-	-webkit-mask-image: url("../assets/gear.png");
-	mask-image: url("../assets/gear.png");
+	-webkit-mask-image: url("../../assets/gear.png");
+	mask-image: url("../../assets/gear.png");
 	mask-origin: content-box;
 	mask-repeat: no-repeat;
 	mask-size: contain;
@@ -119,26 +154,22 @@ canvas {
 		transform: scale(1.6);
 	}
     100% {
-
     }
 }
 
 /* MENU PANE */
 
 .params {
-	position: absolute;
+	position: fixed;
 	z-index: 20;
-	/* left: 0px; */
+	left: 0px;
 	top: 0px;
 	width: 256px;
 	height: 100%;
 	pointer-events: none;
 	padding: var(--pad);
-	box-sizing: border-box;
-	/* transform: translateX(-100%); */
-	/* transition: all var(--anim) var(--ease); */
-	transition: transform var(--anim) var(--ease), opacity var(--anim) var(--ease), visibility var(--anim) var(--ease);
-	will-change: transform;
+	transform: translateX(-100%);
+	transition: all var(--anim) var(--ease);
 }
 
 .params.exp {
@@ -146,7 +177,7 @@ canvas {
 }
 
 .params.pop {
-	transform: translateX(0px) !important;
+	transform: translateX(0px);
 }
 
 .params.pop .gear {
@@ -367,14 +398,14 @@ canvas {
 
 /* GITHUB LOGO */
 
-#github {
+a {
 	position: absolute;
 	right: var(--spc);
 	top: var(--spc);
 	z-index: 10;
 }
 
-#github div {
+#github {
 	width: var(--icn);
 	height: var(--icn);
 }
