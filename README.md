@@ -10,7 +10,7 @@ Liquid code experiment
 🫠 Might liquify your CPU  
 🪫 And melt your battery  
 
-## Experiment n°166 — [Pool Party](https://nicopowa.github.io/ripples3/#img=pool.webp&wsp=0.997&dmp=0.99&pgs=10&rft=0.73&wth=0.49&tnt=0.395&sps=0.64&rgs=0.28&fre=0.2&frp=0.15&frr=4.1&blr=0.58&dst=13.2&skh=0.35&dpt=10.5&sct=0.51&env=1.98&trd=0.032&tmp=0.69&ttr=2.85&tsp=1.7&css=0.51&csc=0.9&csp=0.035&csb=0.15&csd=2.4&sun=0.3&sth=25&sph=24&lht=0.4&lth=0&lph=0&rfs=0&rfm=0&rfv=0)  
+## Experiment n°166 — [Pool Party](https://nicopowa.github.io/ripples3/img=pool.webp&wsp=0.997&dmp=0.996&pgs=12&rft=0.81&wth=0.619&tnt=0.1&sps=2.04&rgs=0.16&fre=0.45&frp=0.71&frr=1&blr=0&dst=0.5&skh=0.583&dpt=1.1&sct=0.18&env=0.19&trd=0.02&tmp=0.28&ttr=1.1&tsp=0.3&css=0.19&csc=1.1&csp=0.06&csb=0.43&csd=0.5&sun=1.6&snh=0.18&sth=90&sph=38&lht=1.9&lih=0.52&lth=105&lph=26&rfs=0.59&rfm=5.07&rfv=3.1)  
 
 - Better physics
 - Improved light
